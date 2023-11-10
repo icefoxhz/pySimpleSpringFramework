@@ -219,9 +219,18 @@ if __name__ == '__main__':
 
 三.  配置文件
 
-配置文件使用 yaml 和 properties ，和java 一样
+配置文件使用 yaml 和 properties ，和java 一样。
 
-![1699605395000](E:\windows_install\AppData\Roaming\Typora\typora-user-images\1699605395000.png)
+目录结构如下 :
+
+```
+config
+   application.properties
+   application-dev.properties
+   application-dev.yaml
+   application-prod.properties
+   application-prod.yaml
+```
 
 
 
