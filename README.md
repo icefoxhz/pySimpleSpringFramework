@@ -198,7 +198,8 @@
  http服务使用的是 fastapi
 
 ```python
-import pySimpleSpringFramework.spring_core.util.codeGenerator.generatorif __name__ == '__main__':    pySimpleSpringFramework.spring_core.util.codeGenerator.generator.AppCodeGenerator.generate_app_and_rest_template()
+import pySimpleSpringFramework.spring_core.util.codeGenerator.generator
+if __name__ == '__main__':   			      pySimpleSpringFramework.spring_core.util.codeGenerator.generator.AppCodeGenerator.generate_app_and_rest_template()
 ```
 
 指定以上代码后会创建3个文件:
