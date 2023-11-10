@@ -2,3 +2,4 @@ from pySimpleSpringFramework.spring_core.util.codeGenerator.generator import App
 
 if __name__ == '__main__':
     AppCodeGenerator.generate_app_and_rest_template()
+
