@@ -399,3 +399,8 @@ if __name__ == '__main__':
 
 根据自己实际情况修改好后，执行 start.py 启动程序
 
+
+
+# 四. 使用
+
+把 pySimpleSpringFramework文件夹放到  site-packages 下面即可
