@@ -1,0 +1,8 @@
+__pySpring_bean_postprocessor_names__: [ "InitializationBeanPostProcessor", "AutowiredBeanPostProcessor" ]
+__pySpring_default_module_names__: {
+  # key = 包全路径 , value = 要导入的类，用逗号隔开
+  "pySimpleSpringFramework.spring_core.task.threadPoolManager": "ThreadPoolManager",
+  "pySimpleSpringFramework.spring_orm.databaseManager": "DatabaseManager",
+  "pySimpleSpringFramework.spring_aop.framework.autoproxy.proxyCreator": "ProxyCreator",
+  "pySimpleSpringFramework.spring_beans.factory.support.defaultPrototypeBeanCreator": "DefaultPrototypeBeanCreator"
+}
