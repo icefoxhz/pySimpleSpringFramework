@@ -220,18 +220,22 @@ spring.profiles.include=dev
 
 application-dev.yaml  
 
+数据库操作使用的是 pandas 和  sqlalchemy
+
 数据库配置和线程池配置如下: 
 
 ```yaml
 datasource:
+  # 是否要打印sql
   debug_sql: true
   sources:
     # 数据源1
     source1:
-      url: mysql+pymysql://127.0.0.1:3306/hz_test
-      username: root
-      password: 112233QQwwee
-  #    connect_args: {"options": "-c search_path=public"}
+      url: postgresql+psycopg2://192.168.101.152:5432/test
+      username: postgres
+      password: postgres
+      # 指定schema, 这里用 public
+      connect_args: {"options": "-c search_path=public"}
       # 如果不设置就全部使用默认值
       pool:
         #    -pool_size=5, 连接数大小，默认为 5，正式环境该数值太小，需根据实际情况调大
