@@ -1,4 +1,4 @@
-import pySimpleSpringFramework.spring_core.util.codeGenerator.generator
+from pySimpleSpringFramework.spring_core.util.codeGenerator.generator import AppCodeGenerator
 
 if __name__ == '__main__':
-    pySimpleSpringFramework.spring_core.util.codeGenerator.generator.AppCodeGenerator.generate_app_and_rest_template()
+    AppCodeGenerator.generate_app_and_rest_template()

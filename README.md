@@ -198,8 +198,11 @@
  http服务使用的是 fastapi
 
 ```python
-import pySimpleSpringFramework.spring_core.util.codeGenerator.generator
-if __name__ == '__main__':   			      pySimpleSpringFramework.spring_core.util.codeGenerator.generator.AppCodeGenerator.generate_app_and_rest_template()
+from pySimpleSpringFramework.spring_core.util.codeGenerator.generator import AppCodeGenerator
+
+if __name__ == '__main__':
+    AppCodeGenerator.generate_app_and_rest_template()
+
 ```
 
 指定以上代码后会创建3个文件:
@@ -211,3 +214,68 @@ if __name__ == '__main__':   			      pySimpleSpringFramework.spring_core.util.c
 ```
 
 自己修改好后，执行 start.py 启动程序
+
+
+
+三.  配置文件
+
+配置文件使用 yaml 和 properties ，和java 一样
+
+![1699605395000](E:\windows_install\AppData\Roaming\Typora\typora-user-images\1699605395000.png)
+
+
+
+application.properties
+
+```
+# 指定使用哪个配置
+spring.profiles.include=dev
+```
+
+
+
+application-dev.yaml  
+
+数据库配置和线程池配置如下: 
+
+```yaml
+datasource:
+  debug_sql: true
+  sources:
+    # 数据源1
+    source1:
+      url: mysql+pymysql://127.0.0.1:3306/hz_test
+      username: root
+      password: 112233QQwwee
+  #    connect_args: {"options": "-c search_path=public"}
+      # 如果不设置就全部使用默认值
+      pool:
+        #    -pool_size=5, 连接数大小，默认为 5，正式环境该数值太小，需根据实际情况调大
+        size: 20
+        #    -pool_recycle, 默认为 600, 推荐设置为 7200, 即如果 connection 空闲了 7200 秒，自动重新获取，以防止 connection 被 db server 关闭。
+        recycle: 600
+        #    -max_overflow=10, 超出 pool_size 后可允许的最大连接数，默认为 10, 这 10 个连接在使用过后，不放在 pool 中，而是被真正关闭的。
+        max_overflow: 1000
+        #    -pool_timeout=30, 获取连接的超时阈值，默认为 30 秒
+        timeout: 10
+    # 数据源2
+    source2:
+      url: mysql+pymysql://127.0.0.1:3306/test
+      username: root
+      password: 112233QQwwee
+      pool:
+        size: 20
+        recycle: 600
+        max_overflow: 1000
+        timeout: 10
+
+
+# 不设置默认为当前机器的cpu数量
+task:
+  execution:
+    pool:
+      max_size: 20      # 设置线程池的最大线程数
+
+
+```
+
