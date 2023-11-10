@@ -9,5 +9,3 @@ if __name__ == '__main__':
 
     # 启动rest服务
     start_rest_service(8000)
-
-            
