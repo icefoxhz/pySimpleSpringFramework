@@ -116,6 +116,11 @@ class DataSource(PyDatabaseConnectivity):
         dstl = self.__get_dataSource_threadLocal()
         dstl.autocommit = autocommit
 
+    @property
+    def autocommit(self):
+        dstl = self.__get_dataSource_threadLocal()
+        return dstl.autocommit
+
     def __parse_to_real_url(self):
         """
         处理密码中的特殊字符。比如 @
@@ -247,6 +252,25 @@ class DataSource(PyDatabaseConnectivity):
             q = self.__get_dataSource_threadLocal_queue()
             self.__local_obj.dstl = q.get()
             self.__local_obj.is_new = self.__local_obj.dstl.is_new
+
+    def execute_by_df(self, dataframe, table_name, if_exists='append', is_create_index=False) -> bool:
+        current_autocommit = self.autocommit
+        # 设置成自动提交
+        self.set_autocommit()
+        try:
+            dataframe.to_sql(table_name, self._engine, if_exists=if_exists, index=is_create_index,
+                             chunksize=self.__chunk_size)
+            return True
+        except Exception as e:
+            ex = e
+        finally:
+            # 设置回去
+            self.set_autocommit(current_autocommit)
+
+        if ex is not None:
+            raise ex
+
+        return False
 
     def shutdown(self):
         self._engine.dispose()

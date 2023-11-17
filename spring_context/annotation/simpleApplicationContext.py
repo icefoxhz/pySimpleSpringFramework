@@ -21,6 +21,7 @@ class SimpleApplicationContext:
 
     def __after_init(self):
         self._bean_factory = DefaultBeanFactory()
+        self._bean_factory.set_application_context(self)
         self._environmentReader = EnvironmentReader()
         self._scanner = Scanner(self._bean_factory)
 

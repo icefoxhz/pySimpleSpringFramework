@@ -17,7 +17,7 @@ class TaskAopTemplate:
     # Around 需要自己手动调用，不会主动调用。正好这里用
     @Around(["aspectPointcutRun"])
     def aspectExecute(self, proceed_join_point):
-        result = self._threadPoolManager.submit_task(proceed_join_point.proceed)
-        return result
+        future = self._threadPoolManager.submit_task(proceed_join_point.proceed)
+        return future
 
 

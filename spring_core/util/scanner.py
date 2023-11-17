@@ -37,6 +37,9 @@ class Scanner:
             return
 
         for package_name in package_names:
+            if ".." in package_name:
+                log.warning("不符合规范的包[{}]被忽略".format(package_name))
+                continue
             package = __import__(package_name, fromlist=[''])
             for loader, module_name, _ in pkgutil.walk_packages(package.__path__):
                 module = loader.find_module(module_name).load_module(module_name)

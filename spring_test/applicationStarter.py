@@ -27,6 +27,8 @@ class ServiceApplication(ApplicationStarter):
 
     def main(self, application_context):
         self.__application_context = application_context
+        applicationEnvironment = self.__application_context.get_bean("applicationEnvironment")
+        print(applicationEnvironment.get("MY_NAME"))
 
 
 serviceApplication = ServiceApplication()

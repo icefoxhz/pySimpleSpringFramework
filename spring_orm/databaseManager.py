@@ -169,6 +169,12 @@ class DatabaseManager:
             self.__after_do_sql(sqls)
         return results
 
+    def execute_by_df(self, dataframe, table_name, if_exists='append', is_create_index=False) -> bool:
+        ds = self.get_current_datasource()
+        if ds is None:
+            return False
+        return ds.execute_by_df(dataframe, table_name, if_exists, is_create_index)
+
     def recover_dstl(self):
         ds = self.get_current_datasource()
         if ds is not None:

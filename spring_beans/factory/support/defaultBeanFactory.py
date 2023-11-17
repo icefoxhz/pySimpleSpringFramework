@@ -25,6 +25,7 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
     def __init__(self, debug=False):
         super().__init__()
         self.__debug = debug
+        self._application_context = None
         self._prototype_new_cache = None
         self._bean_definitions = None
         self._environment = None
@@ -36,9 +37,15 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
     def __after_init(self):
         self._prototype_new_cache = ConcurrentDict()
 
+    def set_application_context(self, application_context):
+        self._application_context = application_context
+
     def refresh(self):
         # 清除所有单例bean
         self.clear_singleton_objects()
+
+        # 把applicationContext注册进去
+        self.register_singleton("applicationContext", self._application_context)
 
         # 创建配置bean
         if self.__debug:
@@ -286,8 +293,9 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
         :param cls:
         :return:
         """
-        if self._prototype_new_cache.contains_key(cls):
-            return copy.deepcopy(self._prototype_new_cache.get(cls))
+        # 会导致序列化报错，不能用copy
+        # if self._prototype_new_cache.contains_key(cls):
+        #     return copy.deepcopy(self._prototype_new_cache.get(cls))
 
         instance = object.__new__(cls)
         self._prototype_new_cache[cls] = instance
