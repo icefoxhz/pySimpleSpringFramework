@@ -64,6 +64,9 @@ if __name__ == '__main__':
             raise Exception("{} 已经存在".format(file_path))
 
         code = """
+        
+import ujson as json
+from typing import Dict
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -81,16 +84,11 @@ async def get_template(opId: int):
     return "ok"
 
 
-class TodoItem(BaseModel):
-    title: str
-    description: str
-
-
-@rest_app.post("/post_test", response_model=TodoItem)
-async def post_template(todo: TodoItem):
+@rest_app.post("/post_test")
+async def post_template(jsonRequest: Dict[int, str]):
     # 这里是获取bean的例子
     # myBean = serviceApplication.application_context.get_bean("myBean")
-    return todo
+    return jsonRequest
 
 
 def start_rest_service(port):
@@ -113,7 +111,7 @@ if __name__ == '__main__':
     serviceApplication.run(True)
 
     # 启动rest服务
-    start_rest_service(8000)
+    start_rest_service(5000)
 
             """
 
@@ -123,7 +121,7 @@ if __name__ == '__main__':
     @staticmethod
     def generate_app_and_rest_template():
         AppCodeGenerator.generate_app_template("applicationStarter.py", True)
-        AppCodeGenerator.generate_rest_service_template("restService.py", True)
+        AppCodeGenerator.generate_rest_service_template("queryController.py", True)
         AppCodeGenerator.__generate_start("start.py")
 
 
