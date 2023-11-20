@@ -444,6 +444,9 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
         self.__add_task_aop_bean_definition()
 
     def __add_ds_aop_bean_definition(self):
+        if not self.contains_singleton("databaseManager"):
+            return
+
         ds_pointcut = {"execution": []}
         select_pointcut = {"execution": []}
         trans_pointcut = {"execution": []}
@@ -502,10 +505,8 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             self._early_singletons[name] = bean
 
     def __add_task_aop_bean_definition(self):
-        # task_pointcut = {
-        #     AnnotationName.SYNC.value: {"execution": []},
-        #     AnnotationName.NEW_THREAD_POOL.value: {"execution": []},
-        # }
+        if not self.contains_singleton("threadPoolManager"):
+            return
 
         sync_pointcut = {"execution": []}
         wait_for_all_completed_pointcut = {"execution": []}

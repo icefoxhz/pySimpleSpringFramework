@@ -1,7 +1,9 @@
+import importlib
 import inspect
 import os
 import pkgutil
 import sys
+
 from pySimpleSpringFramework.spring_beans.factory.annotation.simpleBeanDefinition import SimpleBeanDefinition
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import Component
@@ -23,7 +25,6 @@ class Scanner:
 
     def set_evn(self, env):
         self._environment = env
-        self._default_bean_postprocessor_names = self._environment.get("__pySpring_bean_postprocessor_names__", [])
 
     def scan(self, *package_names):
         self.__load_sys_classes()
@@ -31,22 +32,15 @@ class Scanner:
         return self._bean_definitions
 
     def __load_sys_classes(self):
-        sys_module_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        package_names = self.get_all_sys_modules(sys_module_dir)
-        if package_names is None:
-            return
-
-        for package_name in package_names:
-            if ".." in package_name:
-                log.warning("不符合规范的包[{}]被忽略".format(package_name))
-                continue
-            package = __import__(package_name, fromlist=[''])
-            for loader, module_name, _ in pkgutil.walk_packages(package.__path__):
-                module = loader.find_module(module_name).load_module(module_name)
-                module_members = inspect.getmembers(module, inspect.isclass)
-                for name, cls in module_members:
-                    if name in self._default_bean_postprocessor_names:
-                        self._default_bean_postprocessor_classes[name] = cls
+        self._default_bean_postprocessor_names = self._environment.get("__pySpring_bean_postprocessor_names__", {})
+        for module_full_name, class_name_str in self._default_bean_postprocessor_names.items():
+            class_names = class_name_str.split(",")
+            for class_name in class_names:
+                class_name = class_name.strip()
+                # 动态导入模块
+                module = importlib.import_module(module_full_name)
+                cls = getattr(module, class_name)
+                self._default_bean_postprocessor_classes[class_name] = cls
 
     def __scan_custom_packages(self, *package_names):
         """
@@ -87,7 +81,7 @@ class Scanner:
         self.__register_sys_bean_definitions()
 
     def __register_sys_bean_definitions(self):
-        for class_name in self._default_bean_postprocessor_names:
+        for class_name in self._default_bean_postprocessor_names.values():
             cls = self._default_bean_postprocessor_classes.get(class_name, None)
             if cls is None:
                 raise Exception("类: {} 未找到".format(class_name))

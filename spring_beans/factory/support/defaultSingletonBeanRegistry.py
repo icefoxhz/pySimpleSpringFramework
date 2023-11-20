@@ -10,6 +10,10 @@ class DefaultSingletonBeanRegistry(SingletonBeanRegistry):
         self._singleton_objects = ConcurrentDict()
         self._early_singletons = {}
 
+    def __reduce__(self):
+        # 在序列化过程中排除线程锁
+        return self.__class__, ()
+
     def clear_singleton_objects(self):
         with self._lock:
             self._singleton_objects.clear()
@@ -47,7 +51,6 @@ class DefaultSingletonBeanRegistry(SingletonBeanRegistry):
 
     def get_singleton_count(self) -> int:
         return self._singleton_objects.size
-
 
 # class DefaultSingletonBeanRegistry(SingletonBeanRegistry):
 #

@@ -51,7 +51,7 @@ class DatabaseManager:
 
     def __create_datasource(self):
         # 解析配置获取数据源
-        datasource = self.__app_environment.get("datasource.sources")
+        datasource = self.__app_environment.get("datasource.sources", False)
         if datasource is None:
             return
 

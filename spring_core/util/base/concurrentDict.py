@@ -6,6 +6,10 @@ class ConcurrentDict:
         self._data = {}
         self._lock = threading.Lock()
 
+    def __reduce__(self):
+        # 在序列化过程中排除线程锁
+        return self.__class__, ()
+
     @property
     def size(self):
         with self._lock:

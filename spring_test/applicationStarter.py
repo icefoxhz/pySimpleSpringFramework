@@ -27,8 +27,17 @@ class ServiceApplication(ApplicationStarter):
 
     def main(self, application_context):
         self.__application_context = application_context
-        applicationEnvironment = self.__application_context.get_bean("applicationEnvironment")
-        print(applicationEnvironment.get("MY_NAME"))
+
+        # applicationEnvironment = self.__application_context.get_bean("applicationEnvironment")
+        # print(applicationEnvironment.get("MY_NAME"))
+
+        import pickle
+        serialized_data = pickle.dumps(application_context)
+        print(serialized_data)
+        deserialized_obj = pickle.loads(serialized_data)
+        print(deserialized_obj)
+
+        print("========= 完成 =========")
 
 
 serviceApplication = ServiceApplication()

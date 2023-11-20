@@ -18,14 +18,14 @@ class DataSourceAopTemplate:
         self._basic_types = (int, float, str)
         self._exclude_types = (list, tuple)
         self._db_manager = None
-        self._debug_sql = None
+        self._debug_sql = False
 
     def set_db_manager(self, databaseManager: DatabaseManager):
         self._db_manager = databaseManager
 
     def set_environment(self, applicationEnvironment):
         app_environment = applicationEnvironment
-        self._debug_sql = app_environment.get("datasource.debug_sql")
+        self._debug_sql = app_environment.get("datasource.debug_sql", False)
 
     def _get_real_sqls(self, sql_list, cls_name, method, *args) -> list:
         """
