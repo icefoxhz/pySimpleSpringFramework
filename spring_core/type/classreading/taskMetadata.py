@@ -24,10 +24,10 @@ class TaskMetadata:
                 task_metadata = TaskMetadata(annotation_metadata.cls)
             task_metadata.set_metadata(AnnotationName.SYNC, metadata_task)
 
-        metadata_task = annotation_metadata.get_methods(AnnotationName.NEW_THREAD_POOL)
+        metadata_task = annotation_metadata.get_methods(AnnotationName.WAIT_FOR_ALL_COMPLETED)
         if len(metadata_task) > 0:
             if task_metadata is None:
                 task_metadata = TaskMetadata(annotation_metadata.cls)
-            task_metadata.set_metadata(AnnotationName.NEW_THREAD_POOL, metadata_task)
+            task_metadata.set_metadata(AnnotationName.WAIT_FOR_ALL_COMPLETED, metadata_task)
 
         return task_metadata

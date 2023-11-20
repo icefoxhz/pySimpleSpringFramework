@@ -439,15 +439,6 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             executions.append(execution_str)
         return {"execution": executions}
 
-    @staticmethod
-    def __add_execution_ex(self):
-        for annotationNameValue, metadata in method_map.items():
-            executions = pointcut.get(annotationNameValue)
-            for method in metadata.keys():
-                execution_str = bd.cls.__name__ + "." + method.__name__
-                executions.append(execution_str)
-            pointcut[annotationNameValue] = executions
-
     def __add_sys_aop_bean_definitions(self):
         self.__add_ds_aop_bean_definition()
         self.__add_task_aop_bean_definition()
@@ -517,7 +508,7 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
         # }
 
         sync_pointcut = {"execution": []}
-        new_thread_pool_pointcut = {"execution": []}
+        wait_for_all_completed_pointcut = {"execution": []}
 
         for bd in self._bean_definitions.values():
             meta_obj = bd.get_task_metadata()
@@ -525,12 +516,11 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
                 continue
 
             metadata_map = meta_obj.task_metadata
-            # self.__add_execution_ex(method_map, task_pointcut, bd)
             for anno_name, method_map in metadata_map.items():
                 if anno_name == AnnotationName.SYNC:
                     sync_pointcut = self.__add_execution(method_map, sync_pointcut, bd)
-                if anno_name == AnnotationName.NEW_THREAD_POOL:
-                    new_thread_pool_pointcut = self.__add_execution(method_map, new_thread_pool_pointcut, bd)
+                if anno_name == AnnotationName.WAIT_FOR_ALL_COMPLETED:
+                    wait_for_all_completed_pointcut = self.__add_execution(method_map, wait_for_all_completed_pointcut, bd)
 
         flag = False
         # 调用装饰器，添加进去
@@ -539,9 +529,9 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             TaskAopTemplate.aspectPointcutRun = decorator_pointcut(TaskAopTemplate.aspectPointcutRun)
             flag = True
 
-        if len(new_thread_pool_pointcut["execution"]) > 0:
-            decorator_pointcut = Pointcut(new_thread_pool_pointcut)
-            TaskAopTemplate.aspectPointcutNewThreadPool = decorator_pointcut(TaskAopTemplate.aspectPointcutNewThreadPool)
+        if len(wait_for_all_completed_pointcut["execution"]) > 0:
+            decorator_pointcut = Pointcut(wait_for_all_completed_pointcut)
+            TaskAopTemplate.aspectPointcutWaitForAllCompleted = decorator_pointcut(TaskAopTemplate.aspectPointcutWaitForAllCompleted)
             flag = True
 
         if flag:

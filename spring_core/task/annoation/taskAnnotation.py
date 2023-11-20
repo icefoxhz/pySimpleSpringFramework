@@ -9,9 +9,9 @@ def Sync(target):
     return target
 
 
-def NewThreadPool(target):
+def WaitForAllCompleted(target):
     if isinstance(target, type):
         raise Exception("Sync 仅装饰方法")
-    attr = AnnotationType.get_annotation_attr(AnnotationName.NEW_THREAD_POOL)
+    attr = AnnotationType.get_annotation_attr(AnnotationName.WAIT_FOR_ALL_COMPLETED)
     setattr(target, attr, True)
     return target

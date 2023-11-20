@@ -25,7 +25,7 @@ class AnnotationName(Enum):
     TRANSACTIONAL = 17
 
     SYNC = 18
-    NEW_THREAD_POOL = 19
+    WAIT_FOR_ALL_COMPLETED = 19
 
 
 class AnnotationType:
@@ -54,7 +54,7 @@ class AnnotationType:
         AnnotationName.TRANSACTIONAL: "__transactional__" + __timestamp,
 
         AnnotationName.SYNC: "__sync__" + __timestamp,
-        AnnotationName.NEW_THREAD_POOL: "__new_thread_pool__" + __timestamp
+        AnnotationName.WAIT_FOR_ALL_COMPLETED: "__wait_for_all_completed__" + __timestamp
     }
 
     @staticmethod

@@ -189,8 +189,8 @@ pySimpleSpringFramework
         def task2():
             pass
  
-19. NewThreadPool
-    方法 装饰器. 启用新的线程池
+19. WaitForAllCompleted
+    方法 装饰器. 等待线程池中所有任务执行完成
     
      @Component
     class A:
@@ -198,7 +198,7 @@ pySimpleSpringFramework
         def task():
             return "ok"
        	
-        @NewThreadPool
+        @WaitForAllCompleted
         def run():
             self.task()
            
