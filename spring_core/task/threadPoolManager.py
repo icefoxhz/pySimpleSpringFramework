@@ -50,10 +50,11 @@ class ThreadPoolManager:
         current_running_tasks = work_queue.qsize() if work_queue is not None else 0
         return current_running_tasks
 
-    # def wait_all_completed(self):
-    #     if self.__queue_capacity is not None and self.__queue_capacity.qsize() <= 0:
-    #         completed_futures, unfinished_futures = wait(self.__futures, return_when=ALL_COMPLETED)
-    #         self._re_set_queue()
+    def wait_all_completed(self, clear_futures=True):
+        completed_futures, unfinished_futures = wait(self.__futures, return_when=ALL_COMPLETED)
+        if clear_futures:
+            del self.__futures
+            self.__futures = []
 
     def shutdown(self, clear_futures=True):
         if self.__executor is not None:
