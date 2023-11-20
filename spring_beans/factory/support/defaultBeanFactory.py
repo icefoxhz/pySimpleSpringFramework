@@ -439,6 +439,15 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             executions.append(execution_str)
         return {"execution": executions}
 
+    @staticmethod
+    def __add_execution_ex(self):
+        for annotationNameValue, metadata in method_map.items():
+            executions = pointcut.get(annotationNameValue)
+            for method in metadata.keys():
+                execution_str = bd.cls.__name__ + "." + method.__name__
+                executions.append(execution_str)
+            pointcut[annotationNameValue] = executions
+
     def __add_sys_aop_bean_definitions(self):
         self.__add_ds_aop_bean_definition()
         self.__add_task_aop_bean_definition()
@@ -502,21 +511,40 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             self._early_singletons[name] = bean
 
     def __add_task_aop_bean_definition(self):
-        task_pointcut = {"execution": []}
+        # task_pointcut = {
+        #     AnnotationName.SYNC.value: {"execution": []},
+        #     AnnotationName.NEW_THREAD_POOL.value: {"execution": []},
+        # }
+
+        sync_pointcut = {"execution": []}
+        new_thread_pool_pointcut = {"execution": []}
+
         for bd in self._bean_definitions.values():
             meta_obj = bd.get_task_metadata()
             if meta_obj is None:
                 continue
 
-            method_map = meta_obj.task_metadata
-            task_pointcut = self.__add_execution(method_map, task_pointcut, bd)
+            metadata_map = meta_obj.task_metadata
+            # self.__add_execution_ex(method_map, task_pointcut, bd)
+            for anno_name, method_map in metadata_map.items():
+                if anno_name == AnnotationName.SYNC:
+                    sync_pointcut = self.__add_execution(method_map, sync_pointcut, bd)
+                if anno_name == AnnotationName.NEW_THREAD_POOL:
+                    new_thread_pool_pointcut = self.__add_execution(method_map, new_thread_pool_pointcut, bd)
 
+        flag = False
         # 调用装饰器，添加进去
-        if len(task_pointcut["execution"]) > 0:
-            decorator_pointcut = Pointcut(task_pointcut)
+        if len(sync_pointcut["execution"]) > 0:
+            decorator_pointcut = Pointcut(sync_pointcut)
             TaskAopTemplate.aspectPointcutRun = decorator_pointcut(TaskAopTemplate.aspectPointcutRun)
+            flag = True
 
-            # ---------
+        if len(new_thread_pool_pointcut["execution"]) > 0:
+            decorator_pointcut = Pointcut(new_thread_pool_pointcut)
+            TaskAopTemplate.aspectPointcutNewThreadPool = decorator_pointcut(TaskAopTemplate.aspectPointcutNewThreadPool)
+            flag = True
+
+        if flag:
             template_class = Aspect(TaskAopTemplate)
             name = get_bean_name_by_class(template_class)
 
@@ -527,4 +555,3 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             threadPoolManager = self.get_bean("threadPoolManager")
             aop_bean.set_thread_pool(threadPoolManager)
             self._early_singletons[name] = aop_bean
-

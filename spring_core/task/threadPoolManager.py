@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
-
+import queue
 from pySimpleSpringFramework.spring_core.log import log
 
 
@@ -8,9 +8,16 @@ class ThreadPoolManager:
         self._max_workers = None
         self.__executor = None
         self.__futures = []
+        # 任务等待队列长度
+        # self.__queue_capacity = None
 
     # def after_init(self):
-    #     self._createThreadPoolExecutor()
+    #     self._re_set_queue()
+
+    # def _re_set_queue(self):
+    #     for _ in range(self._max_workers):
+    #         self.__queue_capacity.put(0)
+    #
 
     def set_environment(self, environment):
         self._max_workers = environment.get(key="task.execution.pool.max_size", raise_ex=False)
@@ -19,14 +26,17 @@ class ThreadPoolManager:
         if self.__executor is None:
             log.info("====== 创建线程池 ======")
             self.__executor = ThreadPoolExecutor(max_workers=self._max_workers)
+            # self.__queue_capacity = queue.Queue(maxsize=self._max_workers)
+            # self._re_set_queue()
 
     def submit_task(self, task, *args, **kwargs):
         self._createThreadPoolExecutor()
 
         # 提交任务到线程池
-        log.info("提交任务: " + str(task))
+        # log.info("提交任务: " + str(task))
         future = self.__executor.submit(task, *args, **kwargs)
         self.__futures.append(future)
+        # self.__queue_capacity.get()
         # result = future.result()
         return future
 
@@ -40,19 +50,22 @@ class ThreadPoolManager:
         current_running_tasks = work_queue.qsize() if work_queue is not None else 0
         return current_running_tasks
 
-    def wait_all_completed(self, size=-1):
-        size = self._max_workers if size == -1 else size
-        if len(self.__futures) > size:
-            # 使用wait函数等待所有任务完成
-            completed_futures, unfinished_futures = wait(self.__futures, return_when=ALL_COMPLETED)
-            self.__futures.clear()
+    # def wait_all_completed(self):
+    #     if self.__queue_capacity is not None and self.__queue_capacity.qsize() <= 0:
+    #         completed_futures, unfinished_futures = wait(self.__futures, return_when=ALL_COMPLETED)
+    #         self._re_set_queue()
 
-    def shutdown(self):
-        # 关闭线程池
-        self.__executor.shutdown(wait=True)
-        self.__executor = None
+    def shutdown(self, clear_futures=True):
+        if self.__executor is not None:
+            # 关闭线程池
+            self.__executor.shutdown(wait=True)
+            self.__executor = None
+            if clear_futures:
+                del self.__futures
+                self.__futures = []
+            # self.__queue_capacity = None
 
-# if __name__ == "__main__":
+        # if __name__ == "__main__":
 #     def worker_function(number):
 #         return number + 1
 #

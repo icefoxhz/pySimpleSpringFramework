@@ -35,6 +35,7 @@ class ApplicationStarter:
         # start_bean_name = self.__class__.__name__
         # start_bean_name = start_bean_name[0].lower() + start_bean_name[1:]
         self.__app.run(self)
+        
 
     @property
     def application_context(self):

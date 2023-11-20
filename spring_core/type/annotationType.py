@@ -25,6 +25,7 @@ class AnnotationName(Enum):
     TRANSACTIONAL = 17
 
     SYNC = 18
+    NEW_THREAD_POOL = 19
 
 
 class AnnotationType:
@@ -52,7 +53,8 @@ class AnnotationType:
         AnnotationName.EXECUTE: "__db_execute__" + __timestamp,
         AnnotationName.TRANSACTIONAL: "__transactional__" + __timestamp,
 
-        AnnotationName.SYNC: "__sync__" + __timestamp
+        AnnotationName.SYNC: "__sync__" + __timestamp,
+        AnnotationName.NEW_THREAD_POOL: "__new_thread_pool__" + __timestamp
     }
 
     @staticmethod

@@ -188,7 +188,20 @@ pySimpleSpringFramework
         @Sync
         def task2():
             pass
+ 
+19. NewThreadPool
+    方法 装饰器. 启用新的线程池
     
+     @Component
+    class A:
+        @Sync
+        def task():
+            return "ok"
+       	
+        @NewThreadPool
+        def run():
+            self.task()
+           
     
 ```
 
@@ -410,3 +423,5 @@ if __name__ == '__main__':
 ​	配置文件操作:     applicationEnvironment
 
 ​	   数据库操作:      databaseManager
+
+​	   线程池操作:      threadPoolManager

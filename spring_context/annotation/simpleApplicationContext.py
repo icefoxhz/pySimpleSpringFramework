@@ -25,6 +25,9 @@ class SimpleApplicationContext:
         self._environmentReader = EnvironmentReader()
         self._scanner = Scanner(self._bean_factory)
 
+    def register_singleton(self, bean_name, bean):
+        self._bean_factory.register_singleton(bean_name, bean)
+
     def run(self, start_bean):
         # 加载配置
         log.info("********** 加载配置文件 **********")
@@ -43,6 +46,7 @@ class SimpleApplicationContext:
         # 找到启动类， 启动程序
         log.info("============== 启动入口 ==============\n")
         self.__start(start_bean)
+
 
     def __start(self, start_bean):
         """
