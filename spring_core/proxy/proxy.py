@@ -19,6 +19,9 @@ class DynamicProxy:
         self.__throwing_advices = []
         self.__around_advices = []
 
+    def __reduce__(self):
+        return self.__class__, (self._target,)
+
     @staticmethod
     def __is_aspect_in_advices(join_point, advices):
         do_bean = join_point.target

@@ -45,6 +45,18 @@ class DataSource(PyDatabaseConnectivity):
     __chunk_size = 1000
     __local_obj = threading.local()
 
+    def __reduce__(self):
+        return self.__class__, (self._ds_name,
+                                self._url,
+                                self._username,
+                                self._password,
+                                self._pool_size,
+                                self._pool_recycle,
+                                self._max_overflow,
+                                self._connect_args,
+                                self._pool_timeout
+                                )
+
     def __init__(self,
                  ds_name,
                  url,
@@ -121,24 +133,22 @@ class DataSource(PyDatabaseConnectivity):
         dstl = self.__get_dataSource_threadLocal()
         return dstl.autocommit
 
-    def __parse_to_real_url(self):
+    @staticmethod
+    def _parse_to_real_url(url, username, password):
         """
         处理密码中的特殊字符。比如 @
         :return:
         """
-        password = self._password
         encoded_password = urllib.parse.quote(password)
-        user_ps = f"{self._username}:{encoded_password}@"
-        ls = self._url.split("//")
-        self._url = ls[0] + "//" + user_ps + ls[1]
-        # print(self._url)
+        user_ps = f"{username}:{encoded_password}@"
+        ls = url.split("//")
+        url = str(ls[0]) + "//" + str(user_ps) + str(ls[1])
+        return url
 
     def _after_init(self):
-        self.__parse_to_real_url()
-
         # 新版本默认 autocommit是False， 且无法手动设置为True
         self._engine = create_engine(
-            url=self._url,
+            url=self._parse_to_real_url(self._url, self._username, self._password),
             pool_recycle=self._pool_recycle,
             pool_size=self._pool_size,
             max_overflow=self._max_overflow,
@@ -277,6 +287,15 @@ class DataSource(PyDatabaseConnectivity):
 
 
 # if __name__ == '__main__':
+#     import pickle
+#
+#     obj = DataSource("ds1", "mysql+pymysql://47.102.114.87:3306/hz_test", "root", "112233QQwwee")
+#     serialized_data = pickle.dumps(obj)
+#     print(serialized_data)
+#     # Perform the deserialization if needed
+#     deserialized_obj = pickle.loads(serialized_data)
+#     print(deserialized_obj)
+
 #     ds = DataSource(ds_name="ds", url="mysql+pymysql://47.102.114.87:3306/test", username="root",
 #                     password="112233QQwwee")
 #     ds.new_session()

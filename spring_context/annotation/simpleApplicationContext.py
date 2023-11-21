@@ -44,9 +44,8 @@ class SimpleApplicationContext:
         log.info("********** 初始化流程 **********")
         self._bean_factory.refresh()
         # 找到启动类， 启动程序
-        log.info("============== 启动入口 ==============\n")
+        log.info("============== 执行main方法 ==============\n")
         self.__start(start_bean)
-
 
     def __start(self, start_bean):
         """
