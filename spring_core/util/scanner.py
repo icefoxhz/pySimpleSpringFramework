@@ -52,18 +52,17 @@ class Scanner:
             return
 
         for package_name in package_names:
-            package = __import__(package_name, fromlist=[''])
-            self.__do_scan(package)
+            self.__do_scan(package_name)
 
-    def __do_scan(self, package):
+    def __do_scan(self, package_name):
         """
         模块走一遍，触发装饰器
-        :param package:
+        :param package_name:
         :return:
         """
-        # print("package.__path__ = ", package.__path__)
-        for loader, module_name, _ in pkgutil.walk_packages(package.__path__):
-            module = loader.find_module(module_name).load_module(module_name)
+        package = importlib.import_module(package_name)
+        for finder, module_name, _ in pkgutil.walk_packages(package.__path__):
+            module = importlib.import_module(f"{package_name}.{module_name}")
             if module is None:
                 continue
 
