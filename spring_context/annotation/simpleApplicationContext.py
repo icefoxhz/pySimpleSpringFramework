@@ -28,7 +28,7 @@ class SimpleApplicationContext:
     def register_singleton(self, bean_name, bean):
         self._bean_factory.register_singleton(bean_name, bean)
 
-    def run(self, start_bean):
+    def run(self):
         # 加载配置
         log.info("********** 加载配置文件 **********")
         self.__create_environment()
@@ -43,21 +43,6 @@ class SimpleApplicationContext:
         # 启动刷新
         log.info("********** 初始化流程 **********")
         self._bean_factory.refresh()
-        # 找到启动类， 启动程序
-        log.info("============== 执行main方法 ==============\n")
-        self.__start(start_bean)
-
-    def __start(self, start_bean):
-        """
-        找到奥启动类，调用启动方法 main
-        :return:
-        """
-
-        # start_bean = self._bean_factory.get_bean(start_bean_name)
-        # if start_bean is None:
-        #     raise Exception("未找到启动类")
-
-        start_bean.main(self)
 
     def set_config_directories(self, *config_directories):
         self.config_directories = config_directories

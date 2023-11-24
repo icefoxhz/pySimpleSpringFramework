@@ -1,14 +1,14 @@
-
 import os
 import sys
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import managers
 
+from pySimpleSpringFramework.spring_context.annotation.simpleApplicationContext import SimpleApplicationContext
 from pySimpleSpringFramework.spring_core.applicationStarter import ApplicationStarter
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import ComponentScan, ConfigDirectories
 
-
 # 把父目录放入path， 父目录就是包。 这个需要自己调整
 root_model_path = os.path.dirname(os.path.dirname(os.getcwd()))
-print("root_model_path=", root_model_path)
 sys.path.append(root_model_path)
 
 
@@ -19,23 +19,16 @@ sys.path.append(root_model_path)
 class ServiceApplication(ApplicationStarter):
     def __init__(self):
         super().__init__()
-        self.__application_context = None
-    
-    @property
-    def application_context(self):
-        return self.__application_context
 
-    def main(self, application_context):
-        self.__application_context = application_context
+    def main(self):
+        # applicationEnvironment = self.application_context.get_bean("applicationEnvironment")
+        # print(applicationEnvironment.get("task"))
 
-        # applicationEnvironment = self.__application_context.get_bean("applicationEnvironment")
-        # print(applicationEnvironment.get("MY_NAME"))
+        executorTaskManager = self.application_context.get_bean("executorTaskManager")
 
-        import pickle
-        serialized_data = pickle.dumps(application_context)
-        print(serialized_data)
-        deserialized_obj = pickle.loads(serialized_data)
-        print(deserialized_obj)
+        serviceA = self.application_context.get_bean("serviceA")
+        executorTaskManager.submit(serviceA.print, True, serviceA.callback_function)
+        executorTaskManager.submit(serviceA.print, False, serviceA.callback_function)
 
         print("========= 完成 =========")
 
@@ -43,6 +36,6 @@ class ServiceApplication(ApplicationStarter):
 serviceApplication = ServiceApplication()
 
 if __name__ == '__main__':
-    serviceApplication.run(True)
+    print("root_model_path=", root_model_path)
 
-        
+    serviceApplication.run(True)

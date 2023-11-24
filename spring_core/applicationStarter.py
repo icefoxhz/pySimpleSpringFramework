@@ -1,5 +1,4 @@
 import abc
-import os
 
 from pySimpleSpringFramework.spring_context.annotation.simpleApplicationContext import SimpleApplicationContext
 from pySimpleSpringFramework.spring_core.type.annotationType import AnnotationType, AnnotationName
@@ -9,6 +8,7 @@ class ApplicationStarter:
     """
     入口启动类，给子类继承
     """
+
     def __init__(self):
         self.__app = None
 
@@ -34,13 +34,14 @@ class ApplicationStarter:
         self.__app.set_base_packages(*base_packages)
         # start_bean_name = self.__class__.__name__
         # start_bean_name = start_bean_name[0].lower() + start_bean_name[1:]
-        self.__app.run(self)
-        
+        self.__app.run()
+
+        self.main()
 
     @property
     def application_context(self):
         return self.__app
 
     @abc.abstractmethod
-    def main(self, application_context):
+    def main(self):
         pass

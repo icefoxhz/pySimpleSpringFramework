@@ -1,4 +1,4 @@
-from pySimpleSpringFramework.spring_test.applicationStarter import serviceApplication
+from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
 from pySimpleSpringFramework.spring_test.restService import start_rest_service
 
 # 在这里导入自己的serviceApplication 和 start_rest_service

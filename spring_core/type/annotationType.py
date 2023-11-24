@@ -24,9 +24,6 @@ class AnnotationName(Enum):
     EXECUTE = 16
     TRANSACTIONAL = 17
 
-    SYNC = 18
-    WAIT_FOR_ALL_COMPLETED = 19
-
 
 class AnnotationType:
     __timestamp = str(int(time.time()))
@@ -52,9 +49,6 @@ class AnnotationType:
         AnnotationName.SELECT: "__db_select__" + __timestamp,
         AnnotationName.EXECUTE: "__db_execute__" + __timestamp,
         AnnotationName.TRANSACTIONAL: "__transactional__" + __timestamp,
-
-        AnnotationName.SYNC: "__sync__" + __timestamp,
-        AnnotationName.WAIT_FOR_ALL_COMPLETED: "__wait_for_all_completed__" + __timestamp
     }
 
     @staticmethod

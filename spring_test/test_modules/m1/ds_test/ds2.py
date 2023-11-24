@@ -1,4 +1,3 @@
-from pySimpleSpringFramework.spring_core.task.annoation.taskAnnotation import Sync
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import Component
 from pySimpleSpringFramework.spring_core.type.annotationType import Propagation
 from pySimpleSpringFramework.spring_orm.annoation.dataSourceAnnotation import Transactional, DS
@@ -22,7 +21,6 @@ class DsTest(DsParent):
         self._mapping.insert_user2(username, password)
         # pass
 
-    @Sync
     def insert_user(self, username, password):
         return self._dsTest.insert_user1(username, password)
         # self._dsTest.insert_user2('ls', '3333')

@@ -5,6 +5,7 @@ from pySimpleSpringFramework.spring_core.type.annotation.methodAnnotation import
 @Component
 class C:
     def __init__(self):
+        self.name = "zs"
         self.c = None
         self.a = None
 

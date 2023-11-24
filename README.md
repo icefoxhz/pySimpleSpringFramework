@@ -175,32 +175,6 @@ pySimpleSpringFramework
         @Transactional(Propagation.REQUIRES_NEW)
         def insert_user2(self, username, password):
             self._mapping.insert_user(username, password)
-
-18. Sync
-	方法 装饰器. 启用异步任务。 调用的时候和普通方法一样调用，框架会自动使用多线程执行
-    
-    @Component
-    class A:
-        @Sync
-        def task1():
-            return "ok"
-       	
-        @Sync
-        def task2():
-            pass
- 
-19. WaitForAllCompleted
-    方法 装饰器. 等待线程池中所有任务执行完成
-    
-     @Component
-    class A:
-        @Sync
-        def task():
-            return "ok"
-       	
-        @WaitForAllCompleted
-        def run():
-            self.task()
            
     
 ```
@@ -352,7 +326,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 # 在这里导入自己的serviceApplication实例
-from pySimpleSpringFramework.spring_test.applicationStarter import serviceApplication
+from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
 
 rest_app = FastAPI()
 
@@ -388,7 +362,7 @@ def start_rest_service(port):
     # 启动rest服务
     uvicorn.run(rest_app, host="0.0.0.0", port=port, reload=False)
 
-            
+
 ```
 
 
@@ -397,9 +371,8 @@ def start_rest_service(port):
 
 ```python
 # 在这里导入自己的serviceApplication 和 start_rest_service
-from pySimpleSpringFramework.spring_test.applicationStarter import serviceApplication
+from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
 from pySimpleSpringFramework.spring_test.restService import start_rest_service
-
 
 if __name__ == '__main__':
     # 启动app
@@ -420,8 +393,40 @@ if __name__ == '__main__':
 
 ###  相关的系统bean名称
 
-​	配置文件操作:     applicationEnvironment
+​	          配置文件操作:      applicationEnvironment
 
-​	   数据库操作:      databaseManager
+​	              数据库操作:      databaseManager
 
-​	   线程池操作:      threadPoolManager
+​     线程池 / 进程池操作:      executorTaskManager
+
+
+
+applicationEnvironment: 
+
+```python
+self._application_environment = self.application_context.get_bean("applicationEnvironment")
+max_size = self._application_environment.get("task.execution.pool.max_size")
+```
+
+
+
+executorTaskManager:
+
+```python
+def callback_function(future):
+	future.result()
+
+if __name__ == '__main__':	
+    serviceApplication = ServiceApplication()
+    serviceApplication.run(True)
+    
+	executorTaskManager = serviceApplication.application_context.get_bean("executorTaskManager")
+	executorTaskManager.submit(task_parse, True, callback_function, start, end)
+	executorTaskManager.wait_completed()
+```
+
+
+
+
+
+​	

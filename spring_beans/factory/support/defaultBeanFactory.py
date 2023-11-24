@@ -1,4 +1,4 @@
-import copy
+# import copy
 import importlib
 import sys
 
@@ -12,7 +12,6 @@ from pySimpleSpringFramework.spring_beans.factory.support.defaultSingletonBeanRe
 from pySimpleSpringFramework.spring_context.applicationEnvironment import ApplicationEnvironment
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_core.proxy.proxy import DynamicProxy
-from pySimpleSpringFramework.spring_core.task.taskAopTemplate import TaskAopTemplate
 from pySimpleSpringFramework.spring_core.type.annotationType import AnnotationType, AnnotationName
 from pySimpleSpringFramework.spring_core.type.attrType import AttrJudgeName
 from pySimpleSpringFramework.spring_core.util.base.concurrentDict import ConcurrentDict
@@ -441,7 +440,6 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
 
     def __add_sys_aop_bean_definitions(self):
         self.__add_ds_aop_bean_definition()
-        self.__add_task_aop_bean_definition()
 
     def __add_ds_aop_bean_definition(self):
         if not self.contains_singleton("databaseManager"):
@@ -503,46 +501,3 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             bean.set_db_manager(databaseManager)
             bean.set_environment(self.get_singleton("applicationEnvironment"))
             self._early_singletons[name] = bean
-
-    def __add_task_aop_bean_definition(self):
-        if not self.contains_singleton("threadPoolManager"):
-            return
-
-        sync_pointcut = {"execution": []}
-        wait_for_all_completed_pointcut = {"execution": []}
-
-        for bd in self._bean_definitions.values():
-            meta_obj = bd.get_task_metadata()
-            if meta_obj is None:
-                continue
-
-            metadata_map = meta_obj.task_metadata
-            for anno_name, method_map in metadata_map.items():
-                if anno_name == AnnotationName.SYNC:
-                    sync_pointcut = self.__add_execution(method_map, sync_pointcut, bd)
-                if anno_name == AnnotationName.WAIT_FOR_ALL_COMPLETED:
-                    wait_for_all_completed_pointcut = self.__add_execution(method_map, wait_for_all_completed_pointcut, bd)
-
-        flag = False
-        # 调用装饰器，添加进去
-        if len(sync_pointcut["execution"]) > 0:
-            decorator_pointcut = Pointcut(sync_pointcut)
-            TaskAopTemplate.aspectPointcutRun = decorator_pointcut(TaskAopTemplate.aspectPointcutRun)
-            flag = True
-
-        if len(wait_for_all_completed_pointcut["execution"]) > 0:
-            decorator_pointcut = Pointcut(wait_for_all_completed_pointcut)
-            TaskAopTemplate.aspectPointcutWaitForAllCompleted = decorator_pointcut(TaskAopTemplate.aspectPointcutWaitForAllCompleted)
-            flag = True
-
-        if flag:
-            template_class = Aspect(TaskAopTemplate)
-            name = get_bean_name_by_class(template_class)
-
-            bd = SimpleBeanDefinition(TaskAopTemplate)
-            self.register_bean_definition(name, bd)
-
-            aop_bean = template_class()
-            threadPoolManager = self.get_bean("threadPoolManager")
-            aop_bean.set_thread_pool(threadPoolManager)
-            self._early_singletons[name] = aop_bean

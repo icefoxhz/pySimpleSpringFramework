@@ -33,17 +33,10 @@ sys.path.append(root_model_path)
 class ServiceApplication(ApplicationStarter):
     def __init__(self):
         super().__init__()
-        self.__application_context = None
-    
-    @property
-    def application_context(self):
-        return self.__application_context
 
-    def main(self, application_context):
-        self.__application_context = application_context
-    
-        # 这里写自己的启动逻辑, 以下是一个示例
-        # service = self.__application_context.get_bean("service")
+    def main(self):    
+        # 这里写自己的启动逻辑, 以下是一个示例. (application_context已经定义在父类中)
+        # service = self.application_context.get_bean("service")
         # service.run()
 
 
@@ -122,13 +115,13 @@ if __name__ == '__main__':
 
     @staticmethod
     def generate_app_and_rest_template():
-        AppCodeGenerator.generate_app_template("applicationStarter.py", True)
-        AppCodeGenerator.generate_rest_service_template("restService.py", True)
-        AppCodeGenerator.__generate_start("start.py")
+        AppCodeGenerator.generate_app_template("applicationEntrypoint.py", True)
+        AppCodeGenerator.generate_rest_service_template("restController.py", True)
+        AppCodeGenerator.__generate_start("applicationWithRestEntrypoint.py")
 
 
-if __name__ == '__main__':
-    AppCodeGenerator.generate_app_template("app.py", True)
-    AppCodeGenerator.generate_rest_service_template("rest_service.py", True)
+# if __name__ == '__main__':
+#     AppCodeGenerator.generate_app_template("app.py", True)
+#     AppCodeGenerator.generate_rest_service_template("rest_service.py", True)
 
 

@@ -2,7 +2,6 @@ from pySimpleSpringFramework.spring_core.type.classreading.annotationMetadata im
 from pySimpleSpringFramework.spring_core.type.classreading.aopMetadata import AopMetadata
 from pySimpleSpringFramework.spring_core.type.classreading.beanMetadata import BeanMetadata
 from pySimpleSpringFramework.spring_core.type.classreading.dataSourceMetadata import DataSourceMetadata
-from pySimpleSpringFramework.spring_core.type.classreading.taskMetadata import TaskMetadata
 
 
 class SimpleBeanDefinition:
@@ -21,7 +20,6 @@ class SimpleBeanDefinition:
         self._annotation_metadata = AnnotationMetadata.introspect(self._bean_metadata)
         self._aop_metadata = AopMetadata.introspect(self._annotation_metadata)
         self._ds_metadata = DataSourceMetadata.introspect(self._annotation_metadata)
-        self._task_metadata = TaskMetadata.introspect(self._annotation_metadata)
 
     def get_annotation_metadata(self) -> AnnotationMetadata:
         return self._annotation_metadata
@@ -34,9 +32,6 @@ class SimpleBeanDefinition:
 
     def get_ds_metadata(self) -> DataSourceMetadata:
         return self._ds_metadata
-
-    def get_task_metadata(self) -> TaskMetadata:
-        return self._task_metadata
 
     @staticmethod
     def generic_bean_definition(cls):

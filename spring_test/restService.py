@@ -3,7 +3,7 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from pySimpleSpringFramework.spring_test.applicationStarter import serviceApplication
+from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
 
 # 在这里导入自己的serviceApplication实例
 
