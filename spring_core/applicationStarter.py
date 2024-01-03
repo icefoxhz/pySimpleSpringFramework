@@ -11,9 +11,11 @@ class ApplicationStarter:
 
     def __init__(self):
         self.__app = None
+        self._paramDict = None
 
-    def run(self, debug=False):
+    def run(self, paramDict=None, debug=False):
         """
+        :param paramDict:
         :param debug:
         """
         component_scan_attr = AnnotationType.get_annotation_attr(AnnotationName.COMPONENT_SCAN)
@@ -23,6 +25,8 @@ class ApplicationStarter:
         config_path_attr = AnnotationType.get_annotation_attr(AnnotationName.CONFIG_PATH)
         if not hasattr(self, config_path_attr):
             raise Exception("未找到配置文件目录！请用@ConfigDirectories")
+
+        self._paramDict = paramDict
 
         base_config_path = getattr(self, config_path_attr)
         base_packages = getattr(self, component_scan_attr)
