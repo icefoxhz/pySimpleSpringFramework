@@ -112,7 +112,7 @@ class DataSource(PyDatabaseConnectivity):
 
     def get_session(self):
         dstl = self.__get_dataSource_threadLocal()
-        if self.is_new:
+        if self.is_new and dstl.current_session is None:
             q = self.__get_dataSource_threadLocal_queue()
             q.put(dstl)
             self.__local_obj.dstl = DataSourceThreadLocal()
@@ -260,8 +260,9 @@ class DataSource(PyDatabaseConnectivity):
         if self.is_new:
             # del dstl
             q = self.__get_dataSource_threadLocal_queue()
-            self.__local_obj.dstl = q.get()
-            self.__local_obj.is_new = self.__local_obj.dstl.is_new
+            if not q.empty():
+                self.__local_obj.dstl = q.get()
+                self.__local_obj.is_new = self.__local_obj.dstl.is_new
 
     def execute_by_df(self, dataframe, table_name, if_exists='append', is_create_index=False) -> bool:
         current_autocommit = self.autocommit

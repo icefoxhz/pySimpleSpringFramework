@@ -1,5 +1,5 @@
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait
 
 from pySimpleSpringFramework.spring_core.log import log
 
@@ -53,6 +53,11 @@ class ExecutorTaskManager:
 
     def wait_completed(self):
         self.shutdown()
+
+    @staticmethod
+    def waitUntilComplete(futures):
+        wait(futures)
+        return all(future.done() for future in futures)
 
     def submit(self, task_function, use_process, callback_function, *args, **kwargs):
         if callback_function is None:
