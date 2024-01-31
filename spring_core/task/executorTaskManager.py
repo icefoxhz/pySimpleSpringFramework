@@ -13,19 +13,19 @@ class ExecutorTaskManager:
         self.__app_environment = None
         self._process_pool = None
         self._thread_pool = None
-        self._core_num = multiprocessing.cpu_count()
+        self._core_num = None
         self._thread_num = 2
 
     @property
     def core_num(self):
-        return self._core_num
+        return self._thread_num
 
     def set_environment(self, applicationEnvironment):
         self.__app_environment = applicationEnvironment
 
     def after_init(self):
         self._thread_num = self.__app_environment.get("task.execution.pool.max_size", False)
-        self._thread_num = self._core_num if self._thread_num is None else self._thread_num
+        self._thread_num = multiprocessing.cpu_count() if self._thread_num is None else self._thread_num
 
     def set_core(self, core_num):
         if core_num > self._core_num:

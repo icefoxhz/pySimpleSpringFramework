@@ -40,6 +40,10 @@ class ConcurrentDict:
         with self._lock:
             return list(self._data.values())
 
+    def update(self, other_dict: dict):
+        with self._lock:
+            self._data.update(other_dict)
+            
     def __getitem__(self, K):
         with self._lock:
             return self._data[K]
