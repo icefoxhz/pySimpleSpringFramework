@@ -4,7 +4,7 @@ import urllib.parse
 from queue import Queue
 
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
@@ -81,6 +81,17 @@ class DataSource(PyDatabaseConnectivity):
 
         self._after_init()
 
+    def getTableFieldsMeta(self, table_name):
+        fieldMapping = {}
+        # 使用Inspector检查表结构
+        inspector = inspect(self._engine)
+        # 获取字段名及其类型
+        for column in inspector.get_columns(table_name):
+            # print(f"Column: {column['name']}, Type: {column['type']}")
+            fieldMapping[column['name']] = column['type']
+
+        return fieldMapping
+
     def __get_dataSource_threadLocal(self):
         if not hasattr(self.__local_obj, "dstl"):
             self.__local_obj.dstl = DataSourceThreadLocal()
@@ -118,6 +129,7 @@ class DataSource(PyDatabaseConnectivity):
             self.__local_obj.dstl = DataSourceThreadLocal()
             dstl = self.__local_obj.dstl
             dstl.is_new = True
+            dstl.autocommit = False
 
         session = dstl.current_session \
             if dstl.current_session is not None else self.__get_session_from_thread_local()
@@ -285,7 +297,6 @@ class DataSource(PyDatabaseConnectivity):
 
     def shutdown(self):
         self._engine.dispose()
-
 
 # if __name__ == '__main__':
 #     import pickle

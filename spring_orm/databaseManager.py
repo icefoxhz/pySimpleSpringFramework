@@ -17,6 +17,11 @@ class DatabaseManager:
         self.__datasource_map = {}
         self.__first_datasource = None
         self.__password_decrypter = None
+        self.__db_type_dsNames = {
+            "mysql": [],
+            "oracle": [],
+            "postgresql": []
+        }
 
     def start_debug(self):
         self.__local_obj.debug = True
@@ -97,7 +102,23 @@ class DatabaseManager:
                 self.__first_datasource = ds
                 is_first = False
 
+            if str(url).lower().startswith("mysql"):
+                self.__db_type_dsNames["mysql"].append(ds_name)
+            if str(url).lower().startswith("oracle"):
+                self.__db_type_dsNames["oracle"].append(ds_name)
+            if str(url).lower().startswith("postgresql"):
+                self.__db_type_dsNames["postgresql"].append(ds_name)
+
             log.info("创建数据源成功: " + ds_name)
+
+    def getTableFieldsMeta(self, table_name):
+        try:
+            ds = self.get_current_datasource()
+            if ds is not None:
+                return ds.getTableFieldsMeta(table_name)
+        except Exception as e:
+            log.error(str(e))
+        return None
 
     def get_current_datasource(self) -> DataSource:
         ds = self.__local_obj.current_ds if hasattr(self.__local_obj,
@@ -108,6 +129,9 @@ class DatabaseManager:
     def get_current_datasource_name(self) -> str:
         ds = self.get_current_datasource()
         return ds.get_ds_name() if ds is not None else None
+
+    def get_dsNames(self):
+        return self.__db_type_dsNames
 
     def get_session(self) -> scoped_session:
         ds = self.get_current_datasource()

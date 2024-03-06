@@ -88,6 +88,7 @@ class DataSourceAopTemplate:
         for sql in sql_list:
             pattern = r"#{.*?}"
             matches = re.findall(pattern, sql)
+            matches = list(set(matches))
             for match in matches:
                 # 去掉可能的空格
                 key = str(match).replace("#{", "").replace("}", "").strip()
