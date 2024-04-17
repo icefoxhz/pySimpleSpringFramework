@@ -22,6 +22,7 @@ class DatabaseManager:
             "oracle": [],
             "postgresql": []
         }
+        self.__dsNameType = {}
 
     def start_debug(self):
         self.__local_obj.debug = True
@@ -109,6 +110,12 @@ class DatabaseManager:
             if str(url).lower().startswith("postgresql"):
                 self.__db_type_dsNames["postgresql"].append(ds_name)
 
+            J_SYMBOL = "+"
+            db_type_name = "unKnow"
+            if J_SYMBOL in url:
+                db_type_name = str(url).split(J_SYMBOL)[0].lower()
+            self.__dsNameType[ds_name] = db_type_name
+
             log.info("创建数据源成功: " + ds_name)
 
     def getTableFieldsMeta(self, table_name):
@@ -129,6 +136,13 @@ class DatabaseManager:
     def get_current_datasource_name(self) -> str:
         ds = self.get_current_datasource()
         return ds.get_ds_name() if ds is not None else None
+
+    def get_current_datasource_type_name(self) -> str:
+        ds_name = self.get_current_datasource_name()
+        return self.__dsNameType.get(ds_name, "unKnow")
+
+    def set_datasource_type_name(self, ds_name, type_name):
+        self.__dsNameType[ds_name] = type_name
 
     def get_dsNames(self):
         return self.__db_type_dsNames
@@ -223,3 +237,10 @@ class DatabaseManager:
         for ds in self.__datasource_map.keys():
             ds.shutdown()
         log.info("所有数据源关闭")
+
+    @property
+    def engine(self):
+        ds = self.get_current_datasource()
+        if ds is None:
+            return False
+        return ds.engine

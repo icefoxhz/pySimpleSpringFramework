@@ -103,6 +103,10 @@ class DataSource(PyDatabaseConnectivity):
         return self.__local_obj.dstl_queue
 
     @property
+    def engine(self):
+        return self._engine
+
+    @property
     def is_new(self):
         if not hasattr(self.__local_obj, "is_new"):
             self.__local_obj.is_new = False

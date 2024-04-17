@@ -26,6 +26,7 @@ class ExecutorTaskManager:
     def after_init(self):
         self._thread_num = self.__app_environment.get("task.execution.pool.max_size", False)
         self._thread_num = multiprocessing.cpu_count() if self._thread_num is None else self._thread_num
+        self._core_num = self._thread_num
 
     def set_core(self, core_num):
         if core_num > self._core_num:

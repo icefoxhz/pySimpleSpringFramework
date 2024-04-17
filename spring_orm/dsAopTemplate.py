@@ -2,6 +2,7 @@ import inspect
 import re
 import threading
 
+import numpy
 from pySimpleSpringFramework.spring_aop.framework.annotation.methodAnnotation import Before, AfterReturning, \
     AfterThrowing
 from pySimpleSpringFramework.spring_core.log import log
@@ -16,6 +17,7 @@ class DataSourceAopTemplate:
 
     def __init__(self):
         self._basic_types = (int, float, str)
+        self._basic_string_types = ("numpy.int", "numpy.float", "numpy.str", "numpy.double", "numpy.long")
         self._exclude_types = (list, tuple)
         self._db_manager = None
         self._debug_sql = False
@@ -61,20 +63,27 @@ class DataSourceAopTemplate:
 
             # 自定义类实例处理
             if unknown_class not in self._basic_types:
-                # 类名首字母小写的形式作为参数名
-                class_name = unknown_class.__name__
-                good_key = class_name[0].lower() + class_name[1:]
-                if key != good_key:
-                    log.warning(
-                        "函数[ {}.{} ]中名为[ {} ]的参数是类[ {} ]的实例，建议的参数命名为[ {} ]".format(
-                            cls_name,
-                            method.__name__,
-                            key,
-                            class_name,
-                            good_key))
-                property_dict = get_init_propertiesEx(value)
-                field_to_value_dict.update(property_dict)
-                continue
+                is_find = False
+                for string_type in self._basic_string_types:
+                    if str(unknown_class).find(string_type) >= 0:
+                        is_find = True
+                        break
+
+                if not is_find:
+                    # 类名首字母小写的形式作为参数名
+                    class_name = unknown_class.__name__
+                    good_key = class_name[0].lower() + class_name[1:]
+                    if key != good_key:
+                        log.warning(
+                            "函数[ {}.{} ]中名为[ {} ]的参数是类[ {} ]的实例，建议的参数命名为[ {} ]".format(
+                                cls_name,
+                                method.__name__,
+                                key,
+                                class_name,
+                                good_key))
+                    property_dict = get_init_propertiesEx(value)
+                    field_to_value_dict.update(property_dict)
+                    continue
 
             # 基本数据类型
             field_to_value_dict[key] = value
@@ -88,7 +97,6 @@ class DataSourceAopTemplate:
         for sql in sql_list:
             pattern = r"#{.*?}"
             matches = re.findall(pattern, sql)
-            matches = list(set(matches))
             for match in matches:
                 # 去掉可能的空格
                 key = str(match).replace("#{", "").replace("}", "").strip()
