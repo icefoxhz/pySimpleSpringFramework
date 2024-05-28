@@ -1,6 +1,5 @@
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait
-
 from pySimpleSpringFramework.spring_core.log import log
 
 
@@ -13,31 +12,31 @@ class ExecutorTaskManager:
         self.__app_environment = None
         self._process_pool = None
         self._thread_pool = None
-        self._core_num = None
-        self._thread_num = 2
+        self._core_num = 2
 
     @property
     def core_num(self):
-        return self._thread_num
+        return self._core_num
 
     def set_environment(self, applicationEnvironment):
         self.__app_environment = applicationEnvironment
 
     def after_init(self):
-        self._thread_num = self.__app_environment.get("task.execution.pool.max_size", False)
-        self._thread_num = multiprocessing.cpu_count() if self._thread_num is None else self._thread_num
-        self._core_num = self._thread_num
+        pool_size = self.__app_environment.get("task.execution.pool.max_size", False)
+        self._core_num = multiprocessing.cpu_count() if pool_size is None else pool_size
+        self.init_pool()
 
-    def set_core(self, core_num):
-        if core_num > self._core_num:
-            log.warning("设置值不行大于cpu核心数，可能影响性能！")
-        self._core_num = core_num
+    def init_pool(self):
+        if self._process_pool is None:
+            self._create_process_pool()
+        if self._thread_pool is None:
+            self._create_thread_pool()
 
     def _create_process_pool(self):
         self._process_pool = ProcessPoolExecutor(max_workers=self._core_num)
 
     def _create_thread_pool(self):
-        self._thread_pool = ThreadPoolExecutor(max_workers=self._core_num)
+        self._thread_pool = ThreadPoolExecutor(max_workers=self._core_num * 2)
 
     def shutdown(self):
         try:
@@ -55,6 +54,9 @@ class ExecutorTaskManager:
     def wait_completed(self):
         self.shutdown()
 
+    def wait_completed_and_shutdown(self):
+        self.shutdown()
+
     @staticmethod
     def waitUntilComplete(futures):
         wait(futures)
@@ -64,14 +66,11 @@ class ExecutorTaskManager:
         if callback_function is None:
             callback_function = default_callback_function
 
-        if use_process:
-            if self._process_pool is None:
-                self._create_process_pool()
-            pool = self._process_pool
-        else:
-            if self._thread_pool is None:
-                self._create_thread_pool()
-            pool = self._thread_pool
+        pool = self._process_pool if use_process else self._thread_pool
+        if pool is None:
+            log.error("当前池已经关闭，无法使用！请重新初始化！")
+            return None
 
         future = pool.submit(task_function, *args, **kwargs)
         future.add_done_callback(callback_function)
+        return future

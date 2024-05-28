@@ -7,6 +7,7 @@ from pySimpleSpringFramework.spring_aop.framework.autoproxy.advice import Method
     MethodAfterReturningAdvice, MethodThrowingAdvice, MethodAroundAdvice
 from pySimpleSpringFramework.spring_aop.framework.autoproxy.joinPoint import ProceedJoinPoint, JoinPoint
 from pySimpleSpringFramework.spring_aop.framework.autoproxy.returnObject import ReturnObject
+from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_core.util.commonUtils import get_class_dot_method_name
 
 
@@ -159,6 +160,7 @@ class DynamicProxy:
 
                 self.__do_after(join_point)
             except Exception as ex:
+                log.error(str(ex))
                 self.__do_after_throwing(join_point, ex)
             finally:
                 self.__do_after_returning(join_point, return_object)
