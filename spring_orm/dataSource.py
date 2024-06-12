@@ -5,9 +5,47 @@ from queue import Queue
 
 import pandas as pd
 from sqlalchemy import create_engine, text, inspect
+from sqlalchemy.types import NullType
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import (
+    Integer, BigInteger, SmallInteger, Numeric, Float, Date, DateTime, Double, DOUBLE_PRECISION, VARCHAR, CHAR,
+    String, Text, Boolean, LargeBinary, Time, Interval, JSON, ARRAY
+)
 
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
+
+_sqlalchemy_to_postgresql = {
+    Integer: "INT",
+    BigInteger: "INT",
+    SmallInteger: "INT",
+    Numeric: "FLOAT",
+    Float: "FLOAT",
+    Double: "FLOAT",
+    Date: "DATE",
+    DateTime: "TIMESTAMP",
+    String: "VARCHAR",
+    Text: "TEXT",
+    Boolean: "BOOLEAN",
+    LargeBinary: "BYTEA",
+    Time: "TIME",
+    DOUBLE_PRECISION: "FLOAT",
+    VARCHAR: "VARCHAR"
+}
+
+_sqlalchemy_to_oracle = {
+    Integer: "INT",
+    BigInteger: "INT",
+    SmallInteger: "INT",
+    Numeric: "FLOAT",
+    Double: "FLOAT",
+    Float: "FLOAT",
+    Date: "DATE",
+    DateTime: "TIMESTAMP",
+    String: "VARCHAR2",
+    Text: "CLOB",
+    Time: "TIMESTAMP",
+    CHAR: "CHAR"
+}
 
 """
 https://www.baidu.com/link?url=vbyAdTFH8QPbTw5kU8XpBi75FNjI1wsrrqf3ilQq4F0iqAV4YpMorgC5d84MzKGuObZ0h1gvpanvOYEripokz_&wd=&eqid=ea690b56000b0cbd000000045e4615ec
@@ -90,6 +128,43 @@ class DataSource(PyDatabaseConnectivity):
             # print(f"Column: {column['name']}, Type: {column['type']}")
             fieldMapping[column['name']] = column['type']
 
+        return fieldMapping
+
+    @staticmethod
+    def get_field_mapping(sqlalchemy_field_type, sqlalchemy_to_db):
+        for sqlalchemy_type, postgresql_type in sqlalchemy_to_db.items():
+            if isinstance(sqlalchemy_field_type, sqlalchemy_type):
+                return postgresql_type
+        return None
+
+    def getPostgresqlTableFieldsMeta(self, table_name):
+        fieldMapping = {}
+        # 使用Inspector检查表结构
+        inspector = inspect(self._engine)
+        # 获取字段名及其类型
+        for column in inspector.get_columns(table_name):
+            # print(f"Column: {column['name']}, Type: {column['type']}")
+            # fieldMapping[column['name']] = column['type']
+            sqlalchemy_field_type = column['type']
+            postgresql_field_type = self.get_field_mapping(sqlalchemy_field_type, _sqlalchemy_to_postgresql)
+            val = postgresql_field_type if postgresql_field_type else str(sqlalchemy_field_type)
+            # if val is not None and val != "NULL":
+            fieldMapping[column['name']] = val
+        return fieldMapping
+
+    def getOracleTableFieldsMeta(self, table_name):
+        fieldMapping = {}
+        # 使用Inspector检查表结构
+        inspector = inspect(self._engine)
+        # 获取字段名及其类型
+        for column in inspector.get_columns(table_name):
+            # print(f"Column: {column['name']}, Type: {column['type']}")
+            # fieldMapping[column['name']] = column['type']
+            sqlalchemy_field_type = column['type']
+            postgresql_field_type = self.get_field_mapping(sqlalchemy_field_type, _sqlalchemy_to_oracle)
+            val = postgresql_field_type if postgresql_field_type else str(sqlalchemy_field_type)
+            # if val is not None and val != "NULL":
+            fieldMapping[column['name']] = val
         return fieldMapping
 
     def __get_dataSource_threadLocal(self):
@@ -305,35 +380,39 @@ class DataSource(PyDatabaseConnectivity):
 # if __name__ == '__main__':
 #     import pickle
 #
-#     obj = DataSource("ds1", "mysql+pymysql://47.102.114.87:3306/hz_test", "root", "112233QQwwee")
-#     serialized_data = pickle.dumps(obj)
-#     print(serialized_data)
-#     # Perform the deserialization if needed
-#     deserialized_obj = pickle.loads(serialized_data)
-#     print(deserialized_obj)
-
-#     ds = DataSource(ds_name="ds", url="mysql+pymysql://47.102.114.87:3306/test", username="root",
-#                     password="112233QQwwee")
-#     ds.new_session()
-#     ds.set_autocommit(False)
-#     ds.raw_execute("insert into t1(f1, f2) value('zs', '26')", "insert into t1(f1, f2) value('ls', '12')")
+#     obj = DataSource("ds1", "postgresql+psycopg2://192.168.101.152:5432/test2", "postgres", "postgres")
+#     df = obj.query_to_df("select * from \"Poyanglake_HYDPL_2024\"")
+#     print(df)
 #
-#     try:
-#         ds.new_session()
-#         ds.set_autocommit(False)
-#         ds.raw_execute("insert into t1(f1, f21) value('ww', '54')")
-#         ds.commit()
-#     except:
-#         pass
-#     finally:
-#         ds.recover_dstl()
-#
-#     ds.new_session()
-#     ds.set_autocommit(False)
-#     ds.raw_execute("insert into t1(f1, f2) value('zl', '11')")
-#     ds.commit()
-#     ds.recover_dstl()
-#
-#     ds.commit()
-#     ds.recover_dstl()
-#     ds.close()
+#     # obj = DataSource("ds1", "mysql+pymysql://47.102.114.87:3306/hz_test", "root", "112233QQwwee")
+#     # serialized_data = pickle.dumps(obj)
+#     # print(serialized_data)
+#     # # Perform the deserialization if needed
+#     # deserialized_obj = pickle.loads(serialized_data)
+#     # print(deserialized_obj)
+#     #
+#     # ds = DataSource(ds_name="ds", url="mysql+pymysql://47.102.114.87:3306/test", username="root",
+#     #                 password="112233QQwwee")
+#     # ds.new_session()
+#     # ds.set_autocommit(False)
+#     # ds.raw_execute("insert into t1(f1, f2) value('zs', '26')", "insert into t1(f1, f2) value('ls', '12')")
+#     #
+#     # try:
+#     #     ds.new_session()
+#     #     ds.set_autocommit(False)
+#     #     ds.raw_execute("insert into t1(f1, f21) value('ww', '54')")
+#     #     ds.commit()
+#     # except:
+#     #     pass
+#     # finally:
+#     #     ds.recover_dstl()
+#     #
+#     # ds.new_session()
+#     # ds.set_autocommit(False)
+#     # ds.raw_execute("insert into t1(f1, f2) value('zl', '11')")
+#     # ds.commit()
+#     # ds.recover_dstl()
+#     #
+#     # ds.commit()
+#     # ds.recover_dstl()
+#     # ds.close()

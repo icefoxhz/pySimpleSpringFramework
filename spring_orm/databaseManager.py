@@ -4,9 +4,9 @@ import time
 
 import pandas as pd
 from sqlalchemy.orm import scoped_session
-
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_orm.dataSource import DataSource
+
 
 
 class DatabaseManager:
@@ -127,6 +127,24 @@ class DatabaseManager:
             log.error(str(e))
         return None
 
+    def getPostgresqlTableFieldsMeta(self, table_name):
+        try:
+            ds = self.get_current_datasource()
+            if ds is not None:
+                return ds.getPostgresqlTableFieldsMeta(table_name)
+        except Exception as e:
+            log.error(str(e))
+        return None
+
+    def getOracleTableFieldsMeta(self, table_name):
+        try:
+            ds = self.get_current_datasource()
+            if ds is not None:
+                return ds.getOracleTableFieldsMeta(table_name)
+        except Exception as e:
+            log.error(str(e))
+        return None
+
     def get_current_datasource(self) -> DataSource:
         ds = self.__local_obj.current_ds if hasattr(self.__local_obj,
                                                     "current_ds") and self.__local_obj.current_ds is not None else self.__first_datasource
@@ -146,6 +164,13 @@ class DatabaseManager:
 
     def get_dsNames(self):
         return self.__db_type_dsNames
+
+    def get_db_type(self, ds_name):
+        ds_name = str(ds_name)
+        for dbType, dsNames in  self.__db_type_dsNames.items():
+            if ds_name in dsNames:
+                return dbType
+        return None
 
     def get_session(self) -> scoped_session:
         ds = self.get_current_datasource()
@@ -187,6 +212,9 @@ class DatabaseManager:
             self.__after_do_sql(sql)
 
     def query_to_df(self, sql) -> pd.DataFrame or None:
+        if sql is None:
+            return None
+        
         try:
             self.__before_do_sql(sql)
             ds = self.get_current_datasource()
@@ -197,6 +225,9 @@ class DatabaseManager:
             self.__after_do_sql(sql)
 
     def raw_execute(self, *sqls):
+        if len(sqls) <= 0:
+            return None
+
         results = None
         try:
             self.__before_do_sql(sqls)
