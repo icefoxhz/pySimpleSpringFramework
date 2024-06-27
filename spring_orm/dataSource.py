@@ -12,6 +12,7 @@ from sqlalchemy import (
     String, Text, Boolean, LargeBinary, Time, Interval, JSON, ARRAY
 )
 
+from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
 
 _sqlalchemy_to_postgresql = {
@@ -116,8 +117,16 @@ class DataSource(PyDatabaseConnectivity):
         self._max_overflow = max_overflow
         self._pool_timeout = pool_timeout
         self._engine = None
+        self.__is_debug_sql = False
 
         self._after_init()
+
+    def debug_sql(self, is_debug):
+        self.__is_debug_sql = is_debug
+
+    def _print_sql(self, sql):
+        if self.__is_debug_sql:
+            log.debug(str(sql))
 
     def getTableFieldsMeta(self, table_name):
         fieldMapping = {}
@@ -273,6 +282,8 @@ class DataSource(PyDatabaseConnectivity):
         return dstl.current_session
 
     def raw_query(self, sql) -> object or None:
+        self._print_sql(sql)
+
         session = self.get_session()
         ex = None
         try:
@@ -289,9 +300,11 @@ class DataSource(PyDatabaseConnectivity):
         return None
 
     def query_to_df(self, sql) -> pd.DataFrame or None:
+        self._print_sql(sql)
         return pd.read_sql_query(sql, self._engine)
 
     def raw_execute(self, *sqls):
+        self._print_sql(sqls)
         dstl = self.__get_dataSource_threadLocal()
         autocommit = dstl.autocommit
         session = self.get_session()

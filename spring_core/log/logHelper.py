@@ -116,6 +116,8 @@ class HandleLog:
         file_handler.close()
 
     def __console(self, level, message, exc_info=False, stack_info=False):
+        message = message.replace("\\n", " ")
+
         """构造日志收集器"""
         # 创建日志文件
         all_logger_handler = self.__init_logger_handler(self.__all_log_path)  # 收集所有日志文件

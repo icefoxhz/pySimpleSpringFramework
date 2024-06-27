@@ -499,5 +499,6 @@ class DefaultBeanFactory(ConfigurableBeanFactory, BeanDefinitionRegistry, Defaul
             bean = template_class()
             databaseManager = self.get_bean("databaseManager")
             bean.set_db_manager(databaseManager)
-            bean.set_environment(self.get_singleton("applicationEnvironment"))
+            applicationEnvironment = self.get_singleton("applicationEnvironment")
+            bean.set_environment(applicationEnvironment)
             self._early_singletons[name] = bean

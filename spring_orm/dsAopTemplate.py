@@ -20,14 +20,14 @@ class DataSourceAopTemplate:
         self._basic_string_types = ("numpy.int", "numpy.float", "numpy.str", "numpy.double", "numpy.long")
         self._exclude_types = (list, tuple)
         self._db_manager = None
-        self._debug_sql = False
+        # self._debug_sql = False
 
     def set_db_manager(self, databaseManager: DatabaseManager):
         self._db_manager = databaseManager
 
     def set_environment(self, applicationEnvironment):
         app_environment = applicationEnvironment
-        self._debug_sql = app_environment.get("datasource.debug_sql", False)
+        # self._debug_sql = app_environment.get("datasource.debug_sql", False)
 
     def _get_real_sqls(self, sql_list, cls_name, method, *args) -> list:
         """
@@ -164,8 +164,8 @@ class DataSourceAopTemplate:
             cls_name = joinPoint.target.__class__.__name__
             sql_list = self._get_real_sqls([sql], cls_name, joinPoint.method, *joinPoint.args)
             sql = sql_list[0]
-            if self._debug_sql:
-                log.debug(sql)
+            # if self._debug_sql:
+            #     log.debug(sql)
             return_object.return_value = self._db_manager.raw_execute(sql)
 
     @Order(4)
@@ -207,7 +207,7 @@ class DataSourceAopTemplate:
             cls_name = joinPoint.target.__class__.__name__
             sql_list = self._get_real_sqls([sql], cls_name, joinPoint.method, *joinPoint.args)
             sql = sql_list[0]
-            if self._debug_sql:
-                log.debug(sql)
+            # if self._debug_sql:
+            #     log.debug(sql)
             return_object.return_value = self._db_manager.query_to_df(sql)
             self._db_manager.close()

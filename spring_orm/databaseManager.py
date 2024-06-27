@@ -8,11 +8,11 @@ from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_orm.dataSource import DataSource
 
 
-
 class DatabaseManager:
     __local_obj = threading.local()
 
     def __init__(self):
+        self.__is_debug_sql = False
         self.__app_environment = None
         self.__datasource_map = {}
         self.__first_datasource = None
@@ -26,6 +26,9 @@ class DatabaseManager:
 
     def start_debug(self):
         self.__local_obj.debug = True
+
+    def debug_sql(self, is_debug):
+        self.__is_debug_sql = is_debug
 
     def __before_do_sql(self, sql=None):
         if hasattr(self.__local_obj, "debug") and getattr(self.__local_obj, "debug"):
@@ -45,6 +48,9 @@ class DatabaseManager:
 
     def set_environment(self, applicationEnvironment):
         self.__app_environment = applicationEnvironment
+        is_debug = self.__app_environment.get("datasource.debug_sql", False)
+        is_debug = False if is_debug is None else is_debug
+        self.debug_sql(is_debug)
 
     def set_password_decoder(self, passwordDecrypter):
         self.__password_decrypter = passwordDecrypter
@@ -98,6 +104,7 @@ class DatabaseManager:
                             connect_args=connect_args,
                             pool_timeout=pool_timeout
                             )
+            ds.debug_sql(self.__is_debug_sql)
             self.__datasource_map[ds_name] = ds
             if is_first:
                 self.__first_datasource = ds
@@ -167,7 +174,7 @@ class DatabaseManager:
 
     def get_db_type(self, ds_name):
         ds_name = str(ds_name)
-        for dbType, dsNames in  self.__db_type_dsNames.items():
+        for dbType, dsNames in self.__db_type_dsNames.items():
             if ds_name in dsNames:
                 return dbType
         return None
@@ -214,7 +221,7 @@ class DatabaseManager:
     def query_to_df(self, sql) -> pd.DataFrame or None:
         if sql is None:
             return None
-        
+
         try:
             self.__before_do_sql(sql)
             ds = self.get_current_datasource()
