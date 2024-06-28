@@ -116,8 +116,6 @@ class HandleLog:
         file_handler.close()
 
     def __console(self, level, message, exc_info=False, stack_info=False):
-        message = message.replace("\\n", " ")
-
         """构造日志收集器"""
         # 创建日志文件
         all_logger_handler = self.__init_logger_handler(self.__all_log_path)  # 收集所有日志文件
@@ -154,19 +152,24 @@ class HandleLog:
         self.__close_handler(error_logger_handler)
 
     def debug(self, message):
-        self.__console('debug', message)
+        self.__level_log_do('debug', message)
 
     def info(self, message):
-        self.__console('info', message)
+        self.__level_log_do('info', message)
 
     def warning(self, message):
-        self.__console('warning', message)
+        self.__level_log_do('warning', message)
 
     def error(self, message, exc_info=False, stack_info=False):
-        self.__console('error', message, exc_info, stack_info)
+        self.__level_log_do('error', message, exc_info, stack_info)
 
     def critical(self, message, exc_info=False, stack_info=False):
-        self.__console('critical', message, exc_info, stack_info)
+        self.__level_log_do('critical', message, exc_info, stack_info)
+
+    def __level_log_do(self, level_str, message, exc_info=False, stack_info=False):
+        [self.__console(level_str, str(s), exc_info, stack_info) for s in message] \
+            if type(message) == list \
+            else self.__console(level_str, message)
 
 
 if __name__ == '__main__':

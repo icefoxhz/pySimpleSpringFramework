@@ -61,7 +61,7 @@ class SimpleApplicationContext:
         # 排序
         all_custom_packages = sorted(list(set(all_custom_packages)))
         if self.__debug:
-            log.info("找到所有包如下: \n" + "\n".join(all_custom_packages) + "\n")
+            log.info("找到所有包如下: \n" + "\n".join(all_custom_packages) + "\n", line_feed=False)
         # print("all_custom_packages = ", all_custom_packages)
 
         self._scanner.set_evn(self._environment)

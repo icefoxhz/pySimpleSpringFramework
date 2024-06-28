@@ -126,7 +126,7 @@ class DataSource(PyDatabaseConnectivity):
 
     def _print_sql(self, sql):
         if self.__is_debug_sql:
-            log.debug(str(sql))
+            [log.debug(str(s)) for s in sql] if type(sql) == list else log.debug(str(sql))
 
     def getTableFieldsMeta(self, table_name):
         fieldMapping = {}
@@ -304,7 +304,7 @@ class DataSource(PyDatabaseConnectivity):
         return pd.read_sql_query(sql, self._engine)
 
     def raw_execute(self, *sqls):
-        self._print_sql(sqls)
+        self._print_sql(*sqls)
         dstl = self.__get_dataSource_threadLocal()
         autocommit = dstl.autocommit
         session = self.get_session()
