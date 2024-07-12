@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import threading
 import urllib.parse
 from queue import Queue
@@ -14,6 +16,7 @@ from sqlalchemy import (
 
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
+from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import ch_symbols
 
 _sqlalchemy_to_postgresql = {
     Integer: "INT",
@@ -121,12 +124,29 @@ class DataSource(PyDatabaseConnectivity):
 
         self._after_init()
 
+    @staticmethod
+    def __transfer_meaning(sql):
+        """
+        特殊字符转义
+        """
+        sql_tmp = str(sql).lower()
+        if "where" in sql_tmp:
+            where_idx = sql_tmp.index("where")
+            sql_front = sql[:where_idx]
+
+            # where 条件部分转义
+            sql_back = sql[where_idx:]
+            for k, v in ch_symbols.items():
+                sql_back = sql_back.replace(k, v)
+            sql = sql_front + sql_back
+        return sql
+
     def debug_sql(self, is_debug):
         self.__is_debug_sql = is_debug
 
-    def _print_sql(self, sql):
+    def _print_sql(self, *sqls):
         if self.__is_debug_sql:
-            [log.debug(str(s)) for s in sql] if type(sql) == list else log.debug(str(sql))
+            [log.debug(str(s)) for s in sqls]
 
     def getTableFieldsMeta(self, table_name):
         fieldMapping = {}
@@ -300,11 +320,18 @@ class DataSource(PyDatabaseConnectivity):
         return None
 
     def query_to_df(self, sql) -> pd.DataFrame or None:
+        sql = self.__transfer_meaning(sql)
         self._print_sql(sql)
         return pd.read_sql_query(sql, self._engine)
 
+    def query_table_to_df(self, table_name, columns: list[str] | None = None) -> pd.DataFrame or None:
+        self._print_sql(f"query table: {table_name}, columns: {columns if columns is not None else '*'}")
+        return pd.read_sql_table(table_name, self._engine, columns=columns)
+
     def raw_execute(self, *sqls):
-        self._print_sql(*sqls)
+        new_sqls = [self.__transfer_meaning(sql) for sql in sqls]
+        self._print_sql(*new_sqls)
+
         dstl = self.__get_dataSource_threadLocal()
         autocommit = dstl.autocommit
         session = self.get_session()
@@ -312,7 +339,7 @@ class DataSource(PyDatabaseConnectivity):
         results = []
         ex = None
         try:
-            for sql in sqls:
+            for sql in new_sqls:
                 result = session.execute(text(sql))
                 results.append(result.rowcount)
                 if autocommit:
@@ -330,16 +357,19 @@ class DataSource(PyDatabaseConnectivity):
         return results if len(results) > 1 else results[0]
 
     def raw_commit(self):
+        self._print_sql("执行commit")
         dstl = self.__get_dataSource_threadLocal()
         if dstl.current_session is not None:
             dstl.current_session.commit()
 
     def raw_rollback(self):
+        self._print_sql("执行rollback")
         dstl = self.__get_dataSource_threadLocal()
         if dstl.current_session is not None:
             dstl.current_session.rollback()
 
     def raw_close(self):
+        self._print_sql("关闭session")
         dstl = self.__get_dataSource_threadLocal()
         if dstl.current_session is not None:
             dstl.current_session.close()
@@ -369,6 +399,7 @@ class DataSource(PyDatabaseConnectivity):
                 self.__local_obj.is_new = self.__local_obj.dstl.is_new
 
     def execute_by_df(self, dataframe, table_name, if_exists='append', is_create_index=False) -> bool:
+        self._print_sql(f"run execute_by_df(...), table_name: {table_name}, if_exists={if_exists}")
         current_autocommit = self.autocommit
         # 设置成自动提交
         self.set_autocommit()
@@ -388,6 +419,7 @@ class DataSource(PyDatabaseConnectivity):
         return False
 
     def shutdown(self):
+        self._print_sql("关闭数据库线程池")
         self._engine.dispose()
 
 # if __name__ == '__main__':

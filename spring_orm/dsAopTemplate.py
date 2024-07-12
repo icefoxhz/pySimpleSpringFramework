@@ -10,6 +10,7 @@ from pySimpleSpringFramework.spring_core.type.annotationType import AnnotationTy
 from pySimpleSpringFramework.spring_core.util.commonUtils import get_init_propertiesEx
 from pySimpleSpringFramework.spring_orm.databaseManager import DatabaseManager
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import Order
+from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import ch_symbols
 
 
 class DataSourceAopTemplate:
@@ -88,11 +89,6 @@ class DataSourceAopTemplate:
             # 基本数据类型
             field_to_value_dict[key] = value
 
-        # 要转义的字符
-        ch_symbols = {
-            "%": "%%"
-        }
-
         sql_list_new = []
         for sql in sql_list:
             pattern = r"#{.*?}"
@@ -105,8 +101,18 @@ class DataSourceAopTemplate:
                     raise Exception("{} 无法找到对应的值".format(match))
                 sql = sql.replace(match, str(value))
 
-            for k, v in ch_symbols.items():
-                sql = sql.replace(k, v)
+            sql_tmp = str(sql).lower()
+            if "where" in sql_tmp:
+                where_idx = sql_tmp.index("where")
+                sql_front = sql[:where_idx]
+
+                # where 条件部分转义
+                sql_back = sql[where_idx:]
+                # 要转义的字符
+                for k, v in ch_symbols.items():
+                    sql_back = sql_back.replace(k, v)
+                sql = sql_front + sql_back
+
             sql_list_new.append(sql)
 
         return sql_list_new

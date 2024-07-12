@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import threading
 import time
 
@@ -230,6 +232,15 @@ class DatabaseManager:
             return None
         finally:
             self.__after_do_sql(sql)
+
+    def query_table_to_df(self, table_name, columns: list[str] | None = None) -> pd.DataFrame or None:
+        if table_name is None:
+            return None
+
+        ds = self.get_current_datasource()
+        if ds is not None:
+            return ds.query_table_to_df(table_name, columns)
+        return None
 
     def raw_execute(self, *sqls):
         if len(sqls) <= 0:
