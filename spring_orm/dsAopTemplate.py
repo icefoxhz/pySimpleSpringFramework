@@ -10,7 +10,7 @@ from pySimpleSpringFramework.spring_core.type.annotationType import AnnotationTy
 from pySimpleSpringFramework.spring_core.util.commonUtils import get_init_propertiesEx
 from pySimpleSpringFramework.spring_orm.databaseManager import DatabaseManager
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import Order
-from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import ch_symbols
+from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import transfer_meaning
 
 
 class DataSourceAopTemplate:
@@ -101,17 +101,7 @@ class DataSourceAopTemplate:
                     raise Exception("{} 无法找到对应的值".format(match))
                 sql = sql.replace(match, str(value))
 
-            sql_tmp = str(sql).lower()
-            if "where" in sql_tmp:
-                where_idx = sql_tmp.index("where")
-                sql_front = sql[:where_idx]
-
-                # where 条件部分转义
-                sql_back = sql[where_idx:]
-                # 要转义的字符
-                for k, v in ch_symbols.items():
-                    sql_back = sql_back.replace(k, v)
-                sql = sql_front + sql_back
+            sql = transfer_meaning(sql)
 
             sql_list_new.append(sql)
 

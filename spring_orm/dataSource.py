@@ -16,7 +16,7 @@ from sqlalchemy import (
 
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
-from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import ch_symbols
+from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import transfer_meaning
 
 _sqlalchemy_to_postgresql = {
     Integer: "INT",
@@ -123,23 +123,6 @@ class DataSource(PyDatabaseConnectivity):
         self.__is_debug_sql = False
 
         self._after_init()
-
-    @staticmethod
-    def __transfer_meaning(sql):
-        """
-        特殊字符转义
-        """
-        sql_tmp = str(sql).lower()
-        if "where" in sql_tmp:
-            where_idx = sql_tmp.index("where")
-            sql_front = sql[:where_idx]
-
-            # where 条件部分转义
-            sql_back = sql[where_idx:]
-            for k, v in ch_symbols.items():
-                sql_back = sql_back.replace(k, v)
-            sql = sql_front + sql_back
-        return sql
 
     def debug_sql(self, is_debug):
         self.__is_debug_sql = is_debug
@@ -320,7 +303,7 @@ class DataSource(PyDatabaseConnectivity):
         return None
 
     def query_to_df(self, sql) -> pd.DataFrame or None:
-        sql = self.__transfer_meaning(sql)
+        sql = transfer_meaning(sql)
         self._print_sql(sql)
         return pd.read_sql_query(sql, self._engine)
 
@@ -329,7 +312,7 @@ class DataSource(PyDatabaseConnectivity):
         return pd.read_sql_table(table_name, self._engine, columns=columns)
 
     def raw_execute(self, *sqls):
-        new_sqls = [self.__transfer_meaning(sql) for sql in sqls]
+        new_sqls = [transfer_meaning(sql) for sql in sqls]
         self._print_sql(*new_sqls)
 
         dstl = self.__get_dataSource_threadLocal()
