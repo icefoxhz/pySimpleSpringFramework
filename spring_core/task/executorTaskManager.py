@@ -68,7 +68,7 @@ class ExecutorTaskManager:
 
         pool = self._process_pool if use_process else self._thread_pool
         if pool is None:
-            log.error("当前池已经关闭，无法使用！请重新初始化！")
+            log.error("当前线程/进程池已经关闭，无法使用！请重新初始化！")
             return None
 
         future = pool.submit(task_function, *args, **kwargs)

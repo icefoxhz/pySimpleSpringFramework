@@ -111,6 +111,16 @@ class DataSource(PyDatabaseConnectivity):
                  pool_timeout=30):
 
         self._connect_args = {} if connect_args is None else connect_args
+
+        # # 手动解析执行 SET search_path
+        # self._set_search_path_sql = None
+        # if connect_args is not None and "options" in connect_args.keys():
+        #     ls = connect_args["options"].split(" ")
+        #     for v in ls:
+        #         if str(v).lower().startswith("search_path"):
+        #             search_path_str = (str(v).split("=")[1])
+        #             self._set_search_path_sql = "SET search_path TO " + search_path_str
+
         self._ds_name = ds_name
         self._url = url
         self._username = username
@@ -225,6 +235,7 @@ class DataSource(PyDatabaseConnectivity):
         session = dstl.current_session \
             if dstl.current_session is not None else self.__get_session_from_thread_local()
         # print(dstl.current_session)
+
         return session
 
     def set_autocommit(self, autocommit=True):
