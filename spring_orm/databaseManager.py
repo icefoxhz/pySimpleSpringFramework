@@ -25,28 +25,35 @@ class DatabaseManager:
             "postgresql": []
         }
         self.__dsNameType = {}
+        # 长时间执行的sql为多少秒
+        self.__LONG_SQL_SECOND = 10
 
-    def start_debug(self):
-        self.__local_obj.debug = True
+    # def start_debug(self):
+    #     self.__local_obj.debug = True
 
     def debug_sql(self, is_debug):
         self.__is_debug_sql = is_debug
 
     def __before_do_sql(self, sql=None):
-        if hasattr(self.__local_obj, "debug") and getattr(self.__local_obj, "debug"):
-            setattr(self.__local_obj, "start_time", time.time())
+        # if hasattr(self.__local_obj, "debug") and getattr(self.__local_obj, "debug"):
+        setattr(self.__local_obj, "start_time", time.time())
+
+    @staticmethod
+    def s_to_hms(seconds):
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = int(seconds % 60)
+        return f"{hours:02}小时:{minutes:02}分:{secs:02}秒"
 
     def __after_do_sql(self, sql=None):
-        if hasattr(self.__local_obj, "debug") and getattr(self.__local_obj, "debug"):
-            end_time = time.time()
-            start_time = getattr(self.__local_obj, "start_time")
-            # 计算执行时间
-            execution_time = (end_time - start_time) * 1000
-            s = "数据库执行耗时: {} 毫秒\nsql: {}".format(execution_time, sql if sql is not None else "dataframe")
-            if execution_time > 500:
-                log.warning(s)
-            else:
-                log.debug(s)
+        # if hasattr(self.__local_obj, "debug") and getattr(self.__local_obj, "debug"):
+        end_time = time.time()
+        start_time = getattr(self.__local_obj, "start_time")
+        # 计算执行时间 (秒)
+        execution_time = end_time - start_time
+        if execution_time > self.__LONG_SQL_SECOND:
+            # setattr(self.__local_obj, "execution_time", execution_time)
+            log.debug(f"长耗时数据库操作, 当前耗时 : " + str(self.s_to_hms(execution_time)))
 
     def set_environment(self, applicationEnvironment):
         self.__app_environment = applicationEnvironment
@@ -236,11 +243,14 @@ class DatabaseManager:
     def query_table_to_df(self, table_name, columns: list[str] | None = None) -> pd.DataFrame or None:
         if table_name is None:
             return None
-
-        ds = self.get_current_datasource()
-        if ds is not None:
-            return ds.query_table_to_df(table_name, columns)
-        return None
+        try:
+            self.__before_do_sql(None)
+            ds = self.get_current_datasource()
+            if ds is not None:
+                return ds.query_table_to_df(table_name, columns)
+            return None
+        finally:
+            self.__after_do_sql(None)
 
     def raw_execute(self, *sqls):
         if len(sqls) <= 0:
@@ -260,7 +270,11 @@ class DatabaseManager:
         ds = self.get_current_datasource()
         if ds is None:
             return False
-        return ds.execute_by_df(dataframe, table_name, if_exists, is_create_index)
+        try:
+            self.__before_do_sql(None)
+            return ds.execute_by_df(dataframe, table_name, if_exists, is_create_index)
+        finally:
+            self.__after_do_sql(None)
 
     def recover_dstl(self):
         ds = self.get_current_datasource()
