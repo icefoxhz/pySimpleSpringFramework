@@ -70,6 +70,10 @@ class DatabaseManager:
     def after_init(self):
         self.__create_datasource()
 
+    def get_table_ddl(self, table_name):
+        ds = self.get_current_datasource()
+        return ds.get_table_ddl(table_name)
+
     def __create_datasource(self):
         # 解析配置获取数据源
         datasource = self.__app_environment.get("datasource.sources", False)
@@ -273,6 +277,11 @@ class DatabaseManager:
         try:
             self.__before_do_sql(None)
             return ds.execute_by_df(dataframe, table_name, if_exists, is_create_index)
+        except Exception as e:
+            try:
+                ds.rollback()
+            except Exception as e:
+                log.error(str(e))
         finally:
             self.__after_do_sql(None)
 

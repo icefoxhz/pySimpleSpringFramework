@@ -6,13 +6,19 @@ import urllib.parse
 from queue import Queue
 
 import pandas as pd
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, MetaData, Table
 from sqlalchemy.types import NullType
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import (
     Integer, BigInteger, SmallInteger, Numeric, Float, Date, DateTime, Double, DOUBLE_PRECISION, VARCHAR, CHAR,
     String, Text, Boolean, LargeBinary, Time, Interval, JSON, ARRAY
 )
+from sqlalchemy.engine import reflection
+from sqlalchemy.schema import CreateTable
+try:
+    import geoalchemy2  # ✅关键, 正确支持Geometry类型
+except ImportError:
+    print("geoalchemy2未安装，无法支持Geometry类型")
 
 from pySimpleSpringFramework.spring_core.log import log
 from pySimpleSpringFramework.spring_pdbc.pdbc import PyDatabaseConnectivity
@@ -199,6 +205,22 @@ class DataSource(PyDatabaseConnectivity):
             self.__local_obj.dstl_queue = Queue(maxsize=20)
         return self.__local_obj.dstl_queue
 
+    def get_table_ddl(self, table_name):
+        # inspector = reflection.Inspector.from_engine(self._engine)
+        # # 获取主键
+        # pk = inspector.get_pk_constraint(table_name)
+        # # 获取外键（可选，若需要完全复制）
+        # foreign_keys = inspector.get_foreign_keys(table_name)
+        # # 获取索引
+        # indexes = inspector.get_indexes(table_name)
+
+        # 2. 构建 CREATE TABLE 语句
+        # 使用 SQLAlchemy 的 Table 对象反射，再生成 DDL
+        metadata = MetaData()
+        src_reflected = Table(table_name, metadata, autoload_with=self._engine)
+
+        return str(CreateTable(src_reflected))
+
     @property
     def engine(self):
         return self._engine
@@ -335,7 +357,11 @@ class DataSource(PyDatabaseConnectivity):
         try:
             for sql in new_sqls:
                 result = session.execute(text(sql))
-                results.append(result.rowcount)
+                try:
+                    # sql一般会以returning id结尾
+                    results.append(result.scalar())
+                except:
+                    results.append(result.rowcount)
                 if autocommit:
                     session.commit()
         except Exception as e:
