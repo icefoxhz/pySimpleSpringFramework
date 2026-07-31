@@ -1,16 +1,17 @@
 import logging
 import os
+import sys
 import colorlog
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
-# 配置日志文件名称及路径
-cur_path = os.getcwd()  # 当前目录
-log_path = os.path.join(cur_path, 'logs')  # log_path为存放日志的路径
-if not os.path.exists(log_path): os.mkdir(log_path)  # 若不存在logs文件夹，则自动创建
+# ---------- 全局配置 ----------
+cur_path = os.getcwd()
+log_path = os.path.join(cur_path, 'logs')
+if not os.path.exists(log_path):
+    os.mkdir(log_path)
 
 log_colors_config = {
-    # 终端输出日志颜色配置
     'DEBUG': 'white',
     'INFO': 'cyan',
     'WARNING': 'yellow',
@@ -19,163 +20,110 @@ log_colors_config = {
 }
 
 default_formats = {
-    # 终端输出格式
     'color_format': '%(log_color)s%(asctime)s-%(levelname)s-[日志信息]: %(message)s',
-    # 日志输出格式
     'log_format': '%(asctime)s-%(levelname)s-[日志信息]: %(message)s'
 }
 
-
+# ---------- 日志类 ----------
 class HandleLog:
-    """
-    先创建日志记录器（logging.getLogger），然后再设置日志级别（logger.setLevel），
-    接着再创建日志文件，也就是日志保存的地方（logging.FileHandler），然后再设置日志格式（logging.Formatter），
-    最后再将日志处理程序记录到记录器（addHandler）
-    """
+    _loggers = {}  # 缓存已创建的 logger 对象，key 为 log_name
 
     def __init__(self, log_name=None):
-        self.__now_time = datetime.now().strftime('%Y-%m-%d')  # 当前日期格式化
         if log_name is None:
             log_name = "sysLog"
+        self.log_name = log_name
 
-        # 收集所有日志文件，名称为：[日志名称] 2020-01-01-all.log；收集错误日志信息文件，名称为：[日志名称] 2020-01-01-error.log
-        # 其中，[日志名称]为调用日志时的传入参数
-        self.__all_log_path = os.path.join(log_path, log_name + "_" + self.__now_time + "_all" + ".log")  # 收集所有日志信息文件
-        self.__error_log_path = os.path.join(log_path,
-                                             log_name + "_" + self.__now_time + "_error" + ".log")  # 收集错误日志信息文件
+        if log_name not in HandleLog._loggers:
+            logger = self._create_logger(log_name)
+            HandleLog._loggers[log_name] = logger
 
-        # 配置日志记录器及其级别 设置默认日志记录器记录级别为DEBUG
-        self.__logger = logging.getLogger()  # 创建日志记录器
-        self.__logger.setLevel(logging.DEBUG)  # 设置默认日志记录器记录级别
+        self.__logger = HandleLog._loggers[log_name]
 
-    @staticmethod
-    def __init_logger_handler(log_path):
-        """
-        创建日志记录器handler，用于收集日志
-        :param log_path: 日志文件路径
-        :return: 日志记录器
-        """
-        # 写入文件
-        logger_handler = RotatingFileHandler(filename=log_path,
-                                             maxBytes=10 * 1024 * 1024,  # 如果文件超过10M大小时，切割日志文件
-                                             encoding='utf-8',
-                                             backupCount=5)  # 可以设置 backupCount=3 在切割日志文件后仅保留3个文件
-        return logger_handler
+    def _create_logger(self, log_name):
+        # 使用独立名称，避免与根记录器冲突
+        logger = logging.getLogger(f"custom_{log_name}")
+        logger.setLevel(logging.DEBUG)
 
-    @staticmethod
-    def __init_console_handle():
-        """创建终端日志记录器handler，用于输出到控制台"""
-        console_handle = colorlog.StreamHandler()
-        return console_handle
+        # ⭐ 关键修复：禁止日志传播到根 Logger，避免重复打印
+        logger.propagate = False
 
-    def __set_log_handler(self, logger_handler, level=logging.DEBUG):
-        """
-        设置handler级别并添加到logger收集器
-        :param logger_handler: 日志记录器
-        :param level: 日志记录器级别
-        """
-        logger_handler.setLevel(level=level)
-        self.__logger.addHandler(logger_handler)  # 添加到logger收集器
+        # 防止重复添加（由于缓存机制，此判断其实多余，但保留安全）
+        if logger.handlers:
+            return logger
 
-    def __set_color_handle(self, console_handle):
-        """
-        设置handler级别并添加到终端logger收集器
-        :param console_handle: 终端日志记录器
-        :param level: 日志记录器级别
-        """
-        console_handle.setLevel(logging.DEBUG)
-        self.__logger.addHandler(console_handle)
+        now_time = datetime.now().strftime('%Y-%m-%d')
+        all_log_path = os.path.join(log_path, f"{log_name}_{now_time}_all.log")
+        error_log_path = os.path.join(log_path, f"{log_name}_{now_time}_error.log")
 
-    @staticmethod
-    def __set_color_formatter(console_handle, color_config):
-        """
-        设置输出格式-控制台
-        :param console_handle: 终端日志记录器
-        :param color_config: 控制台打印颜色配置信息
-        :return:
-        """
-        formatter = colorlog.ColoredFormatter(default_formats["color_format"], log_colors=color_config)
-        console_handle.setFormatter(formatter)
+        # ----- 文件 Handler（所有级别） -----
+        all_handler = RotatingFileHandler(
+            all_log_path,
+            maxBytes=10 * 1024 * 1024,
+            encoding='utf-8',
+            backupCount=5
+        )
+        all_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter(default_formats["log_format"])
+        all_handler.setFormatter(file_formatter)
 
-    @staticmethod
-    def __set_log_formatter(file_handler):
-        """
-        设置日志输出格式-日志文件
-        :param file_handler: 日志记录器
-        """
-        formatter = logging.Formatter(default_formats["log_format"],
-                                      datefmt='')  # datefmt用于设置asctime的格式，例如：%a, %d %b %Y %H:%M:%S 或者 %Y-%m-%d %H:%M:%S
-        file_handler.setFormatter(formatter)
+        # ----- 文件 Handler（仅 ERROR 及以上） -----
+        error_handler = RotatingFileHandler(
+            error_log_path,
+            maxBytes=10 * 1024 * 1024,
+            encoding='utf-8',
+            backupCount=5
+        )
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(file_formatter)
 
-    @staticmethod
-    def __close_handler(file_handler):
-        """
-        关闭handler
-        :param file_handler: 日志记录器
-        """
-        file_handler.close()
+        # ----- 控制台 Handler（输出到 stdout） -----
+        console_handler = colorlog.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.DEBUG)
+        color_formatter = colorlog.ColoredFormatter(
+            default_formats["color_format"],
+            log_colors=log_colors_config
+        )
+        console_handler.setFormatter(color_formatter)
 
-    def __console(self, level, message, exc_info=False, stack_info=False):
-        """构造日志收集器"""
-        # 创建日志文件
-        all_logger_handler = self.__init_logger_handler(self.__all_log_path)  # 收集所有日志文件
-        error_logger_handler = self.__init_logger_handler(self.__error_log_path)  # 收集错误日志信息文件
-        console_handle = self.__init_console_handle()
+        # 添加所有 Handler
+        logger.addHandler(all_handler)
+        logger.addHandler(error_handler)
+        logger.addHandler(console_handler)
 
-        # 设置日志文件格式
-        self.__set_log_formatter(all_logger_handler)
-        self.__set_log_formatter(error_logger_handler)
-        self.__set_color_formatter(console_handle, log_colors_config)
+        return logger
 
-        self.__set_log_handler(all_logger_handler)  # 设置handler级别并添加到logger收集器
-        self.__set_log_handler(error_logger_handler, level=logging.ERROR)
-        self.__set_color_handle(console_handle)
+    def _log(self, level_func, message, *args, **kwargs):
+        if isinstance(message, list):
+            for msg in message:
+                level_func(str(msg), *args, **kwargs)
+        else:
+            level_func(str(message), *args, **kwargs)
 
-        if level == 'info':
-            self.__logger.info(message)
-        elif level == 'debug':
-            self.__logger.debug(message)
-        elif level == 'warning':
-            self.__logger.warning(message)
-        elif level == 'error':
-            self.__logger.error(message, exc_info=exc_info,
-                                stack_info=stack_info)  # exc_info=True, stack_info=True 用于在日志中记录堆栈信息，方便查看日志进行调试
-        elif level == 'critical':
-            self.__logger.critical(message, exc_info=exc_info,
-                                   stack_info=stack_info)  # exc_info=True, stack_info=True 用于在日志中记录堆栈信息，方便查看日志进行调试
+    # ----- 对外接口 -----
+    def debug(self, message, *args, **kwargs):
+        self._log(self.__logger.debug, message, *args, **kwargs)
 
-        self.__logger.removeHandler(all_logger_handler)  # 避免日志输出重复问题
-        self.__logger.removeHandler(error_logger_handler)
-        self.__logger.removeHandler(console_handle)
+    def info(self, message, *args, **kwargs):
+        self._log(self.__logger.info, message, *args, **kwargs)
 
-        self.__close_handler(all_logger_handler)  # 关闭handler
-        self.__close_handler(error_logger_handler)
+    def warning(self, message, *args, **kwargs):
+        self._log(self.__logger.warning, message, *args, **kwargs)
 
-    def debug(self, message):
-        self.__level_log_do('debug', message)
+    def error(self, message, *args, **kwargs):
+        self._log(self.__logger.error, message, *args, **kwargs)
 
-    def info(self, message):
-        self.__level_log_do('info', message)
-
-    def warning(self, message):
-        self.__level_log_do('warning', message)
-
-    def error(self, message, exc_info=False, stack_info=False):
-        self.__level_log_do('error', message, exc_info, stack_info)
-
-    def critical(self, message, exc_info=False, stack_info=False):
-        self.__level_log_do('critical', message, exc_info, stack_info)
-
-    def __level_log_do(self, level_str, message, exc_info=False, stack_info=False):
-        [self.__console(level_str, str(s), exc_info, stack_info) for s in message] \
-            if type(message) == list \
-            else self.__console(level_str, message)
+    def critical(self, message, *args, **kwargs):
+        self._log(self.__logger.critical, message, *args, **kwargs)
 
 
+# ---------- 使用示例 ----------
 if __name__ == '__main__':
     log = HandleLog()
     log.info("这是日志信息")
     log.debug("这是debug信息")
     log.warning("这是警告信息")
-    log.error("这是错误日志信息")
+    log.error("这是错误日志信息", exc_info=True)
     log.critical("这是严重级别信息")
+
+    # 测试列表输入
+    log.info(["列表消息1", "列表消息2"])

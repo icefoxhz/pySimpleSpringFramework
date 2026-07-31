@@ -146,6 +146,7 @@ class DataSource(PyDatabaseConnectivity):
     def _print_sql(self, *sqls):
         if self.__is_debug_sql:
             [log.debug(str(s)) for s in sqls]
+            # [print(f"SQL: {s}\n") for s in sqls]
 
     def getTableFieldsMeta(self, table_name):
         fieldMapping = {}
@@ -389,7 +390,7 @@ class DataSource(PyDatabaseConnectivity):
             dstl.current_session.rollback()
 
     def raw_close(self):
-        self._print_sql("关闭session")
+        # self._print_sql("关闭session")
         dstl = self.__get_dataSource_threadLocal()
         if dstl.current_session is not None:
             dstl.current_session.close()

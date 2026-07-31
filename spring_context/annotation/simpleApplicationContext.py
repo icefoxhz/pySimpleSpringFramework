@@ -20,7 +20,7 @@ class SimpleApplicationContext:
         self.__after_init()
 
     def __after_init(self):
-        self._bean_factory = DefaultBeanFactory()
+        self._bean_factory = DefaultBeanFactory(debug=self.__debug)
         self._bean_factory.set_application_context(self)
         self._environmentReader = EnvironmentReader()
         self._scanner = Scanner(self._bean_factory)
@@ -28,12 +28,25 @@ class SimpleApplicationContext:
     def register_singleton(self, bean_name, bean):
         self._bean_factory.register_singleton(bean_name, bean)
 
+    def _set_environment(self):
+        # 读取配置的环境变量设置
+        envs = self._environment.get("envs")
+        if envs is not None:
+            for k, v in envs.items():
+                os.environ[str(k)] = str(v)
+                if self.__debug:
+                    log.info(str(k) + ": " + str(v))
+
     def run(self):
         # 加载配置
         log.info("********** 加载配置文件 **********")
         self.__create_environment()
         # 设置配置
         self._bean_factory.set_environment(self._environment)
+
+        # 设置配置中的环境变量
+        self._set_environment()
+
         # 创建bean定义
         log.info("********** 扫描包，加载类信息 **********")
         bds = self.__create_bean_definitions()
