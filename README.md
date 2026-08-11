@@ -1,7 +1,7 @@
 pySimpleSpringFramework
 
 Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、事务及事务传递性、线程池、进程池、http服务等spring最常用功能。
- 
+
 让java程序员可以快上手的python框架
 规范代码
 快速开发
@@ -10,13 +10,7 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
 # 依赖库
 
 ```text
-conda install pandas  -c conda-forge -y
-conda install colorlog  -c conda-forge -y
-pip install PyYAML -i  https://pypi.tuna.tsinghua.edu.cn/simple/
-pip install sqlalchemy -i  https://pypi.tuna.tsinghua.edu.cn/simple/
-pip install uvicorn -i  https://pypi.tuna.tsinghua.edu.cn/simple/
-pip install fastapi -i  https://pypi.tuna.tsinghua.edu.cn/simple/
-pip install tqdm -i  https://pypi.tuna.tsinghua.edu.cn/simple/
+详细查看 readme.txt 文件
 ```
 
 # 一.  装饰器
@@ -54,18 +48,27 @@ pip install tqdm -i  https://pypi.tuna.tsinghua.edu.cn/simple/
     
 5. Autowired
 	方法 装饰器, 注入 bean，方法名必须以 set 或 _set 开头. 例子如下: 
+    默认单例模式。
     
     @Component
     class A:
         pass
     
-    @Component
+    @Component()
     class B:
         @Autowired
         def set_params(self, a):
             self.a = a
+            
+6. Scope
+	类 装饰器, SCOPE("singleton") / SCOPE("prototype") ， singleton为单例， prototype为原型
     
-6. Value
+    @Component
+    @Scope("prototype")
+    class A:
+        pass
+    
+7. Value
 	方法 装饰器, 注入配置文件信息。 
     
     @Component
@@ -75,14 +78,6 @@ pip install tqdm -i  https://pypi.tuna.tsinghua.edu.cn/simple/
             self.v1 = None
     
     spring.profiles.include为配置文件的 key, v1 是自己定义的变量， 把对应的值赋值给 self.v1
-    
-7. Scope
-	类 装饰器, SCOPE("singleton") / SCOPE("prototype") ， singleton为单例， prototype为原型
-    
-    @Component
-    @Scope("prototype")
-    class A:
-        pass
 
 8. Aspect
 	类 装饰器, 标记为AOP类
@@ -192,9 +187,10 @@ pip install tqdm -i  https://pypi.tuna.tsinghua.edu.cn/simple/
         @Transactional(Propagation.REQUIRES_NEW)
         def insert_user2(self, username, password):
             self._mapping.insert_user(username, password)
-           
-    
+        
 ```
+
+
 
 # 二.  配置文件
 

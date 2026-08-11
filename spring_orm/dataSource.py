@@ -15,6 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import reflection
 from sqlalchemy.schema import CreateTable
+
 try:
     import geoalchemy2  # ✅关键, 正确支持Geometry类型
 except ImportError:
@@ -76,6 +77,9 @@ https://blog.csdn.net/weixin_30772105/article/details/98882352
 
 
 class DataSourceThreadLocal:
+    def __init__(self):
+        pass
+
     is_new = False
     autocommit = True
     current_session = None
@@ -367,7 +371,8 @@ class DataSource(PyDatabaseConnectivity):
                     session.commit()
         except Exception as e:
             ex = e
-            self.raw_rollback()
+            if autocommit:
+                self.raw_rollback()
         finally:
             if autocommit:
                 self.raw_close()
@@ -421,21 +426,32 @@ class DataSource(PyDatabaseConnectivity):
 
     def execute_by_df(self, dataframe, table_name, if_exists='append', is_create_index=False) -> bool:
         self._print_sql(f"run execute_by_df(...), table_name: {table_name}, if_exists={if_exists}")
-        current_autocommit = self.autocommit
-        # 设置成自动提交
-        self.set_autocommit()
+
+        dstl = self.__get_dataSource_threadLocal()
+        autocommit = dstl.autocommit
+        ex = None
+        # 使用事务
+        session = self.get_session()
         try:
-            dataframe.to_sql(table_name, self._engine, if_exists=if_exists, index=is_create_index,
+            dataframe.to_sql(table_name, session.connection(),
+                             if_exists=if_exists,
+                             index=is_create_index,
                              chunksize=self.__chunk_size)
+
+            if autocommit:
+                session.commit()
             return True
         except Exception as e:
+            if autocommit:
+                session.rollback()
             ex = e
+            log.error("execute_by_df ERROR: " + str(e))
         finally:
-            # 设置回去
-            self.set_autocommit(current_autocommit)
+            if autocommit:
+                self.raw_close()
 
-        if ex is not None:
-            raise ex
+            if ex is not None:
+                raise ex
 
         return False
 

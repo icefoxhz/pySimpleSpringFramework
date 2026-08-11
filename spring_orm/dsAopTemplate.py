@@ -161,21 +161,23 @@ class DataSourceAopTemplate:
             sql_list = self._get_real_sqls([sql], cls_name, joinPoint.method, *joinPoint.args)
             sql = sql_list[0]
             # if self._debug_sql:
-            #     log.debug(sql)
+            #   log.debug("=>>>>>>>>" + sql)
             return_object.return_value = self._db_manager.raw_execute(sql)
 
     @Order(4)
     @AfterReturning(["aspectPointcutTransactional"])
     def aspectEndTransaction(self, joinPoint, return_object):
         if hasattr(self.__local_obj, "new_trans") and self.__local_obj.new_trans:
-            self._db_manager.commit()
+            if not self.__local_obj.ex:
+                self._db_manager.commit()
             self._db_manager.close()
             self._db_manager.recover_dstl()
             self.__local_obj.new_trans = False
             return
 
         if hasattr(self.__local_obj, "trans_method") and self.__local_obj.trans_method == joinPoint.method:
-            self._db_manager.commit()
+            if not self.__local_obj.ex:
+                self._db_manager.commit()
             self._db_manager.close()
 
     @Order(5)
@@ -186,6 +188,7 @@ class DataSourceAopTemplate:
             self._db_manager.close()
         if hasattr(self.__local_obj, "new_trans"):
             self._db_manager.recover_dstl()
+        self.__local_obj.ex = ex
         raise ex
 
     @Order(6)

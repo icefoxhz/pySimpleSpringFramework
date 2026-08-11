@@ -278,10 +278,7 @@ class DatabaseManager:
             self.__before_do_sql(None)
             return ds.execute_by_df(dataframe, table_name, if_exists, is_create_index)
         except Exception as e:
-            try:
-                ds.rollback()
-            except Exception as e:
-                log.error(str(e))
+            raise e
         finally:
             self.__after_do_sql(None)
 
