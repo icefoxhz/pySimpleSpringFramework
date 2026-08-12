@@ -171,6 +171,25 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
         @Delete("delete from user")
         def delete_users(self):
             pass
+
+    **占位符使用规范（重要，防止 SQL 注入）**：
+
+    | 语法 | 行为 | 适用场景 | 安全性 |
+    | --- | --- | --- | --- |
+    | `#{key}` | 字符串直接替换 | 表名、列名、`ORDER BY` 字段、`LIMIT` 等结构部分 | ⚠️ **不安全**，用户输入禁用 |
+    | `:key`   | SQLAlchemy 命名绑定参数 | **所有用户输入值** | ✅ **安全**，推荐使用 |
+
+    ```python
+    # ✅ 推荐写法（安全）：表名用 #{}，值用 :name
+    @Insert("insert into #{table}(id, name) values (:id, :name)")
+    def insert(self, table, id, name):
+        pass
+
+    # ❌ 危险写法（仅限内部硬编码 SQL，不要拼接用户输入）
+    @Insert("insert into user(name) values ('#{name}')")
+    def insert(self, name):
+        pass
+    ```
     
 17. Transactional
 	类/方法 装饰器. 
@@ -203,8 +222,10 @@ config
    application.properties
    application-dev.properties
    application-dev.yaml
+   application-dev.py
    application-prod.properties
    application-prod.yaml
+   application-prod.py
 ```
 
 
@@ -266,6 +287,21 @@ task:
 
 
 ```
+
+
+
+application-dev.py
+
+相等于在py中写变量，局限是没有层级关系，只能单个变量
+
+```python
+data_name="test"
+d = {"a": 1}
+```
+
+
+
+
 
 # 三.  代码模块创建器
 
