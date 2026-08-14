@@ -27,6 +27,8 @@ class DynamicProxy:
         object.__setattr__(self, '_DynamicProxy__around_advices', [])
         # 预编译索引: method_name -> CompiledAdviceChain
         object.__setattr__(self, '_DynamicProxy__compiled', {})
+        # 预构建 wrapper 缓存: method_name -> wrapper 闭包（避免每次访问重新绑定方法+新建闭包）
+        object.__setattr__(self, '_DynamicProxy__wrapper_cache', {})
         object.__setattr__(self, '_DynamicProxy__compiled_dirty', True)
         # 上面两个内部状态必须用 object.__setattr__ 写入，因为 DynamicProxy.__setattr__
         # 会把所有非 _target 的赋值都转发到 target，破坏内部状态。
@@ -73,10 +75,12 @@ class DynamicProxy:
         # 没有 advice 就没有索引
         if not (before_adv or after_adv or ret_adv or thr_adv or around_adv):
             object.__setattr__(self, '_DynamicProxy__compiled', {})
+            object.__setattr__(self, '_DynamicProxy__wrapper_cache', {})
             object.__setattr__(self, '_DynamicProxy__compiled_dirty', False)
             return
 
         compiled = {}
+        wrapper_cache = {}
         # 枚举 target 上所有可被 AOP 的方法名
         for name in dir(target):
             if name.startswith('__') and name.endswith('__'):
@@ -107,10 +111,18 @@ class DynamicProxy:
             chain.around = ard
             # 预构建 around 调用链
             if ard:
-                chain._around_steps = _build_around_steps(ard)
+                chain._around_steps = _build_around_runner(ard, getattr(target, name))
             compiled[name] = chain
 
+            # 预构建 wrapper（避免每次访问时重新 getattr 绑定方法 + 新建闭包）
+            real_method = getattr(target, name)
+            if callable(real_method):
+                wrapper_cache[name] = _make_wrapper(
+                    target, real_method, b, a_, r, t, chain._around_steps
+                )
+
         object.__setattr__(self, '_DynamicProxy__compiled', compiled)
+        object.__setattr__(self, '_DynamicProxy__wrapper_cache', wrapper_cache)
         object.__setattr__(self, '_DynamicProxy__compiled_dirty', False)
 
     # ------------------------------------------------------------------ #
@@ -121,36 +133,16 @@ class DynamicProxy:
         if self.__compiled_dirty:
             self.compile()
 
-        # 2) 取实际属性
+        # 2) 命中预构建 wrapper（AOP 方法）：O(1) 返回，零绑定、零闭包分配
+        wrapper = self.__wrapper_cache.get(attr)
+        if wrapper is not None:
+            return wrapper
+
+        # 3) 非 AOP 属性直通 target
         try:
-            obj = getattr(self._target, attr)
+            return getattr(self._target, attr)
         except AttributeError:
             raise
-
-        if not callable(obj):
-            return obj
-
-        # 3) O(1) 查 chain
-        chain = self.__compiled.get(attr)
-        if chain is None or chain.empty:
-            return obj  # 没有 AOP，直通
-
-        # 4) 构造 wrapper（每次访问只生成一次闭包，调用本身不再生成）
-        target = self._target
-        real_method = obj
-        before = chain.before
-        after = chain.after
-        after_returning = chain.after_returning
-        after_throwing = chain.after_throwing
-        around_steps = chain._around_steps
-
-        def wrapper(*args, **kwargs):
-            return DynamicProxy._invoke(
-                target, real_method,
-                before, after, after_returning, after_throwing,
-                around_steps, args, kwargs
-            )
-        return wrapper
 
     # ------------------------------------------------------------------ #
     # 核心执行（静态，避免 self 闭包）                                       #
@@ -158,7 +150,7 @@ class DynamicProxy:
     @staticmethod
     def _invoke(target, real_method,
                 before, after, after_returning, after_throwing,
-                around_steps, args, kwargs):
+                around_runner, args, kwargs):
         jp = JoinPoint(target, real_method, *args, **kwargs)
         ro = ReturnObject()
         ex_holder = None
@@ -169,8 +161,8 @@ class DynamicProxy:
                 advice.before(jp)
 
             # 主调用
-            if around_steps:
-                rv = _run_around(around_steps, real_method, args, kwargs)
+            if around_runner:
+                rv = around_runner(args, kwargs)
             else:
                 rv = real_method(*args, **kwargs)
 
@@ -222,34 +214,40 @@ def _applies(advice, target, method_name):
     return False
 
 
-def _build_around_steps(around_advices_reversed):
-    """
-    直接返回按执行顺序排列的 around advice 元组。
-    真正的调用链在 _run_around 里通过闭包装配。
-    """
-    return tuple(around_advices_reversed)
+def _make_wrapper(target, real_method, before, after, after_returning, after_throwing, around_runner):
+    """预构建 wrapper 闭包：运行时只做一次 dict 查找，不再绑定方法/新建闭包。"""
+    def wrapper(*args, **kwargs):
+        return DynamicProxy._invoke(
+            target, real_method,
+            before, after, after_returning, after_throwing,
+            around_runner, args, kwargs
+        )
+    return wrapper
 
 
-def _run_around(steps, real_method, args, kwargs):
-    """执行预构建的 around 链（无递归，无每次构造的 ProceedJoinPoint）"""
-    n = len(steps)
-    if n == 0:
+def _build_around_runner(steps, real_method):
+    """
+    预构建 around 执行链（compile 时一次性装配）：
+    返回 runner(args, kwargs)，运行时零闭包分配。
+    steps[0] 是最外层（最先跑），最内层落到 real_method。
+    """
+    if not steps:
+        return ()
+
+    def leaf(args, kwargs):
         return real_method(*args, **kwargs)
 
-    # 叶子：直接调用真实方法
-    next_call = (lambda: real_method(*args, **kwargs))
+    runner = leaf
+    # 从最内层 step 开始向外装配
+    for i in range(len(steps) - 1, -1, -1):
+        step = steps[i]
+        inner = runner
 
-    # 从尾到头装配闭包链：
-    #   steps[0] 是最外层（最先跑）
-    #   steps[n-1].proceed() 才会落到 real_method
-    for i in range(n - 1, -1, -1):
-        advice = steps[i]
-        nxt = next_call  # 闭包捕获
-        pjp = _ProceedJoinPoint(nxt, args=args, kwargs=kwargs)
+        def make_run(a=step, nxt=inner):
+            def run(args, kwargs):
+                pjp = _ProceedJoinPoint(lambda: nxt(args, kwargs), args=args, kwargs=kwargs)
+                return a.around(pjp)
+            return run
 
-        def make_call(a=advice, p=pjp):
-            def call():
-                return a.around(p)
-            return call
-        next_call = make_call()
-    return next_call()
+        runner = make_run()
+    return runner
