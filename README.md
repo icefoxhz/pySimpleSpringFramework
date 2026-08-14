@@ -10,7 +10,11 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
 # 依赖库
 
 ```text
-详细查看 readme.txt 文件
+核心库: pandas, sqlalchemy, PyYAML, colorlog, psycopg2-binary, geoalchemy2
+http服务(可选): uvicorn, fastapi
+其他: tqdm, requests
+
+详细安装命令查看 readme.txt 文件
 ```
 
 # 一.  装饰器
@@ -47,14 +51,14 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
         pass
     
 5. Autowired
-	方法 装饰器, 注入 bean，方法名必须以 set 或 _set 开头. 例子如下: 
+	方法 装饰器, 注入 bean，方法名必须以 set 或 _set 或 __set 开头. 例子如下: 
     默认单例模式。
     
     @Component
     class A:
         pass
     
-    @Component()
+    @Component
     class B:
         @Autowired
         def set_params(self, a):
@@ -113,24 +117,30 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
         print(">>>>>>>>> aspectAfter1 = > ", joinPoint.target, joinPoint.method, joinPoint.args, joinPoint.kwargs)
         
 12. AfterReturning
-	方法 装饰器
+	方法 装饰器, 可改写返回值（修改 return_object.return_value 即可）
     
+    @AfterReturning(["aspectPointcut1"])
     def aspectAfterReturning2(self, joinPoint, return_object):
         print(">>>>>>>>> aspectAfterReturning2 = > ", joinPoint.target, joinPoint.method, joinPoint.args,
         joinPoint.kwargs,
         return_object)
 
-13. AfterReturning
-	方法 装饰器
-    
+    @AfterReturning(["aspectPointcut1"])
     def aspectAfterReturning3(self, joinPoint, return_object):
         return_object.return_value = return_object.return_value + 10
         print(">>>>>>>>> aspectAfterReturning3 = > ", joinPoint.target, joinPoint.method, joinPoint.args, 
         joinPoint.kwargs, 
         return_object)        
 
-14. Round
-	方法 装饰器, 这个比较特殊，不自动调用原方法，需要自己调用
+13. AfterThrowing
+	方法 装饰器, 目标方法抛出异常时执行
+    
+    @AfterThrowing(["aspectPointcut1"])
+    def aspectAfterThrowing1(self, joinPoint, ex):
+        print(">>>>>>>>> aspectAfterThrowing1 = > ", str(ex))
+
+14. Around
+	方法 装饰器, 这个比较特殊，不自动调用原方法，需要自己调用 proceed()
     
     @Around(["aspectPointcut1"])
     def aspectAround2(self, proceed_join_point):
@@ -140,13 +150,13 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
         print(">>>>>>>>>  around after aspectAround2", proceed_join_point)
         return result
 
-15. Ds
+15. DS
 	类/方法 装饰器,切换数据源。 类上加的话，所有方法都会切换到指定数据源，方法上的优先级最高
     
     @Component
-    @Ds("ds1")
+    @DS("ds1")
     class A:
-        @Ds("ds2")
+        @DS("ds2")
         def insert_user():
             pass
     
@@ -189,24 +199,24 @@ Python版的Spring框架，实现 IOC、AOP、数据库、多数据源支持、�
     @Insert("insert into user(name) values ('#{name}')")
     def insert(self, name):
         pass
-    ```
-    
+```
+
 17. Transactional
-	类/方法 装饰器. 
+	类/方法 装饰器. 取值来自 Propagation 枚举（from pySimpleSpringFramework.spring_core.type.annotationType import Propagation）:
     @Transactional(Propagation.REQUIRED) :  如果当前没有事物就创建一个事务，如果已有就使用当前事务
     @Transactional(Propagation.REQUIRES_NEW): 启用一个新事物执行
     
     @Component
 	@Transactional()  # 默认为 Propagation.REQUIRED
     class DsTest:
-        @Transactional(Propagation.REQUIRES)
+        @Transactional(Propagation.REQUIRED)
         def insert_user1(self, username, password):
             self._mapping.insert_user(username, password)
     	
         @Transactional(Propagation.REQUIRES_NEW)
         def insert_user2(self, username, password):
             self._mapping.insert_user(username, password)
-        
+    
 ```
 
 
@@ -245,7 +255,7 @@ application-dev.yaml
 
 数据库配置和线程池配置如下: 
 
-```yaml
+​```yaml
 datasource:
   # 是否要打印sql
   debug_sql: true
@@ -259,7 +269,7 @@ datasource:
       connect_args: {"options": "-c search_path=public"}
       # 如果不设置就全部使用默认值
       pool:
-        #    -pool_size=5, 连接数大小，默认为 5，正式环境该数值太小，需根据实际情况调大
+        #    -pool_size=10, 连接数大小，默认为 10，正式环境该数值太小，需根据实际情况调大
         size: 20
         #    -pool_recycle, 默认为 600, 推荐设置为 7200, 即如果 connection 空闲了 7200 秒，自动重新获取，以防止 connection 被 db server 关闭。
         recycle: 600
@@ -309,8 +319,10 @@ d = {"a": 1}
 from pySimpleSpringFramework.spring_core.util.codeGenerator.generator import AppCodeGenerator
 
 if __name__ == '__main__':
+    # 在当前目录生成3个文件: applicationEntrypoint.py / restController.py / applicationWithRestEntrypoint.py
     AppCodeGenerator.generate_app_and_rest_template()
-    # 如果不需要 http服务，使用 AppCodeGenerator.generate_app_template
+    # 如果不需要 http服务，使用:
+    # AppCodeGenerator.generate_app_template("applicationEntrypoint.py")
 
 ```
 
@@ -318,7 +330,7 @@ if __name__ == '__main__':
 
 指定以上代码后会创建3个文件:
 
-1. applicationStarter.py  类似java springboot的 SpringApplication
+1. applicationEntrypoint.py  类似java springboot的 SpringApplication
 
 ```python
 import os
@@ -335,23 +347,17 @@ sys.path.append(root_model_path)
 
 
 # 基于 root_model_path 的相对的位置， 因为 root_model_path 就是包
-@ComponentScan("../../pySimpleSpringFramework/spring_test/test_modules")
+@ComponentScan("../myProject/module1")
 # 这里修改成自己的配置文件位置（相对当前这个启动文件的位置）
-@ConfigDirectories("../../config")
+@ConfigDirectories("../config")
 class ServiceApplication(ApplicationStarter):
     def __init__(self):
         super().__init__()
-        self.__application_context = None
-    
-    @property
-    def application_context(self):
-        return self.__application_context
 
-    def main(self, application_context):
-        self.__application_context = application_context
-        
-        # 这里执行自己的启动逻辑
-        # ...
+    def main(self):
+        # 这里写自己的启动逻辑, 以下是一个示例. (application_context 定义在父类中)
+        # service = self.application_context.get_bean("service")
+        # service.run()
 
 
 serviceApplication = ServiceApplication()
@@ -359,23 +365,21 @@ serviceApplication = ServiceApplication()
 if __name__ == '__main__':
     serviceApplication.run(True)
 
-        
 ```
 
 
 
-2. restService.py  
+2. restController.py  
 
    使用 fastapi 作为http服务组件。你也可以用自己喜欢的
 
 ```python
-
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 # 在这里导入自己的serviceApplication实例
-from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
+# from applicationEntrypoint import serviceApplication
 
 rest_app = FastAPI()
 
@@ -396,14 +400,7 @@ class TodoItem(BaseModel):
 @rest_app.post("/post_test", response_model=TodoItem)
 async def post_template(todo: TodoItem):
     # 这里是获取bean的例子
-    dsTest = serviceApplication.application_context.get_bean("dsTest")
-    try:
-        dsTest.delete_users()
-    except:
-        pass
-
-    print("insert_user: ", dsTest.insert_user('ww', '112345'))
-    print(dsTest.get_users())
+    # myBean = serviceApplication.application_context.get_bean("myBean")
     return todo
 
 
@@ -411,17 +408,16 @@ def start_rest_service(port):
     # 启动rest服务
     uvicorn.run(rest_app, host="0.0.0.0", port=port, reload=False)
 
-
 ```
 
 
 
-3. start.py
+3. applicationWithRestEntrypoint.py
 
 ```python
 # 在这里导入自己的serviceApplication 和 start_rest_service
-from pySimpleSpringFramework.spring_test.applicationEntrypoint import serviceApplication
-from pySimpleSpringFramework.spring_test.restService import start_rest_service
+# from applicationEntrypoint import serviceApplication
+# from restController import start_rest_service
 
 if __name__ == '__main__':
     # 启动app
@@ -432,11 +428,16 @@ if __name__ == '__main__':
 
 ```
 
-根据自己实际情况修改好后，执行 start.py 启动程序
+根据自己实际情况修改好后，执行 applicationWithRestEntrypoint.py 启动程序
 
 # 四. 使用
 
-把 pySimpleSpringFramework文件夹放到  site-packages 下面即可
+把 pySimpleSpringFramework文件夹放到  site-packages 下面即可。
+推荐使用软链接方式（这样框架更新后不用重新拷贝，详见 readme.txt）：
+
+```bat
+mklink /d "你的环境路径\Lib\site-packages\pySimpleSpringFramework" "D:\project\self\python\pySimpleSpringProject\2.0\pySimpleSpringFramework"
+```
 
 
 
