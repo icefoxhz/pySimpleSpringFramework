@@ -12,6 +12,27 @@ from pySimpleSpringFramework.spring_orm.databaseManager import DatabaseManager
 from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import Order
 from pySimpleSpringFramework.spring_orm.transferMeaningSymbol import transfer_meaning
 
+# 预编译正则（避免每次 SQL 调用重复编译）
+_HASH_PATTERN = re.compile(r"#\{([^}]+)\}")
+_NAMED_PATTERN = re.compile(r"(?<!:):([A-Za-z_]\w*)")
+
+# 方法参数名缓存：key = 底层函数对象（签名不变即可复用，避免每次调用 inspect.signature）
+_METHOD_PARAM_NAMES_CACHE = {}
+_METHOD_PARAM_NAMES_CACHE_MAX = 1024
+
+
+def _get_method_param_names(method):
+    """缓存方法参数名（去掉 self）。"""
+    func = getattr(method, "__func__", method)
+    names = _METHOD_PARAM_NAMES_CACHE.get(func)
+    if names is None:
+        parameters = inspect.signature(func).parameters
+        names = tuple(param for param in parameters if param != "self")
+        if len(_METHOD_PARAM_NAMES_CACHE) >= _METHOD_PARAM_NAMES_CACHE_MAX:
+            _METHOD_PARAM_NAMES_CACHE.clear()
+        _METHOD_PARAM_NAMES_CACHE[func] = names
+    return names
+
 
 class DataSourceAopTemplate:
     __local_obj = threading.local()
@@ -21,6 +42,7 @@ class DataSourceAopTemplate:
         self._basic_string_types = ("numpy.int", "numpy.float", "numpy.str", "numpy.double", "numpy.long")
         self._exclude_types = (list, tuple)
         self._db_manager = None
+        self.__local_obj.ex = None
         # self._debug_sql = False
 
     def set_db_manager(self, databaseManager: DatabaseManager):
@@ -40,9 +62,8 @@ class DataSourceAopTemplate:
         :return:
         """
         field_to_value_dict = {}
-        parameters = inspect.signature(method).parameters
-        # 去掉参数中的 'self'
-        parameter_names = [param for param in parameters if param != 'self']
+        # 缓存参数名（inspect.signature 约 9µs/次，参数名恒定不变）
+        parameter_names = _get_method_param_names(method)
         for i in range(len(parameter_names)):
             key = parameter_names[i]
             value = args[i]
@@ -91,19 +112,29 @@ class DataSourceAopTemplate:
 
         sql_list_new = []
         for sql in sql_list:
-            pattern = r"#{.*?}"
-            matches = re.findall(pattern, sql)
-            for match in matches:
-                # 去掉可能的空格
-                key = str(match).replace("#{", "").replace("}", "").strip()
-                value = field_to_value_dict.get(key, None)
-                if value is None:
-                    raise Exception("{} 无法找到对应的值".format(match))
-                sql = sql.replace(match, str(value))
+            # 1) 解析 #{...} 字符串替换（仅用于表名/列名等结构部分，参数值请用 :name）
+            substituted_keys = set()
 
-            sql = transfer_meaning(sql)
+            def _sub_hash(match):
+                key = match.group(1).strip()
+                if key not in field_to_value_dict:
+                    raise Exception("{} 无法找到对应的值".format(match.group(0)))
+                substituted_keys.add(key)
+                return str(field_to_value_dict[key])
 
-            sql_list_new.append(sql)
+            sql_substituted = _HASH_PATTERN.sub(_sub_hash, sql)
+            sql_transferred = transfer_meaning(sql_substituted)
+
+            # 2) 从最终的 SQL 文本里反向解析 :name 占位符，只把"实际被使用"的 key 作为 bind params
+            #    (?<!:) 排除 :: 类型转换语法
+            named_placeholders = set(_NAMED_PATTERN.findall(sql_substituted))
+            params = {
+                k: field_to_value_dict[k]
+                for k in named_placeholders
+                if k in field_to_value_dict
+            }
+
+            sql_list_new.append({"sql": sql_transferred, "params": params})
 
         return sql_list_new
 
@@ -179,6 +210,8 @@ class DataSourceAopTemplate:
             if not self.__local_obj.ex:
                 self._db_manager.commit()
             self._db_manager.close()
+
+        self.__local_obj.ex = None
 
     @Order(5)
     @AfterThrowing(["aspectPointcutTransactional"])

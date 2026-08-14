@@ -221,17 +221,17 @@ class DatabaseManager:
         if ds is not None:
             ds.set_autocommit(autocommit)
 
-    def raw_query(self, sql) -> object or None:
+    def raw_query(self, sql, use_text=True) -> object or None:
         try:
             self.__before_do_sql(sql)
             ds = self.get_current_datasource()
             if ds is not None:
-                return ds.raw_query(sql)
+                return ds.raw_query(sql, use_text=use_text)
             return None
         finally:
             self.__after_do_sql(sql)
 
-    def query_to_df(self, sql) -> pd.DataFrame or None:
+    def query_to_df(self, sql, use_text=True) -> pd.DataFrame or None:
         if sql is None:
             return None
 
@@ -239,7 +239,7 @@ class DatabaseManager:
             self.__before_do_sql(sql)
             ds = self.get_current_datasource()
             if ds is not None:
-                return ds.query_to_df(sql)
+                return ds.query_to_df(sql, use_text=use_text)
             return None
         finally:
             self.__after_do_sql(sql)
@@ -256,7 +256,7 @@ class DatabaseManager:
         finally:
             self.__after_do_sql(None)
 
-    def raw_execute(self, *sqls):
+    def raw_execute(self, *sqls, use_text=True):
         if len(sqls) <= 0:
             return None
 
@@ -265,7 +265,7 @@ class DatabaseManager:
             self.__before_do_sql(sqls)
             ds = self.get_current_datasource()
             if ds is not None:
-                results = ds.raw_execute(*sqls)
+                results = ds.raw_execute(*sqls, use_text=use_text)
         finally:
             self.__after_do_sql(sqls)
         return results
