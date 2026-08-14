@@ -23,9 +23,9 @@ http服务(可选): uvicorn, fastapi
 
 ```python
 1. ComponentScan 
-	类装饰器，添加要扫描的模块，支持多个
-    
-    @ComponentScan("../../test_modules1", "../../test_modules2")
+	类装饰器，添加要扫描的目录（项目目录名）, 会自动递归查找所有带有@Component的类。
+   
+    @ComponentScan("../../test_project")
     class ServiceApplication(ApplicationStarter):
         pass
     
