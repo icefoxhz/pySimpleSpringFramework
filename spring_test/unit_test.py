@@ -9,7 +9,7 @@ from pySimpleSpringFramework.spring_core.type.annotation.classAnnotation import 
 @ComponentScan("../../pySimpleSpringFramework/spring_test/test_beans")
 @ConfigDirectories("../../config")
 class MyServiceApplicationTest(ApplicationStarter):
-    def main(self, app):
+    def main(self):
         pass
 
 
@@ -153,7 +153,7 @@ class TestAddition(unittest.TestCase):
         self.b.get_result()
 
     def test_log(self):
-        from pySimpleSpring.logger import log
+        from pySimpleSpringFramework.spring_core.log import log
         log.info("这是日志信息")
         log.debug("这是debug信息")
         log.warning("这是警告信息")
