@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import datetime
+import re
 import threading
 import urllib.parse
+from copy import deepcopy
 from queue import Queue
 
 import pandas as pd
@@ -147,10 +150,75 @@ class DataSource(PyDatabaseConnectivity):
     def debug_sql(self, is_debug):
         self.__is_debug_sql = is_debug
 
+    @staticmethod
+    def _render_actual_sql(sql, params):
+        """
+        把 :name 占位符替换为字面值，仅用于 debug 打印，**不会真正执行**
+        - str   → 'value' (单引号包裹，内部单引号转义)
+        - None  → NULL
+        - bool  → TRUE / FALSE
+        - 数字  → 原值
+        - 时间  → 'isoformat' 单引号包裹
+        """
+        if not params:
+            return sql
+
+        def _sub(match):
+            key = match.group(1)
+            if key not in params:
+                return match.group(0)
+            v = params[key]
+            if v is None:
+                return "NULL"
+            if isinstance(v, bool):
+                return "TRUE" if v else "FALSE"
+            if isinstance(v, (int, float)):
+                return str(v)
+            if isinstance(v, (datetime.datetime, datetime.date)):
+                return "'" + v.isoformat() + "'"
+            return "'" + str(v).replace("'", "''") + "'"
+
+        return re.sub(r"(?<!:):([A-Za-z_]\w*)", _sub, sql)
+
     def _print_sql(self, *sqls):
-        if self.__is_debug_sql:
-            [log.debug(str(s)) for s in sqls]
-            # [print(f"SQL: {s}\n") for s in sqls]
+        if not self.__is_debug_sql:
+            return
+        for s in sqls:
+            if isinstance(s, dict):
+                actual = self._render_actual_sql(s.get('sql', ''), s.get('params') or {})
+                log.debug(actual)
+            else:
+                log.debug(s)
+
+    @staticmethod
+    def _render_actual_sql(sql, params):
+        """
+        把 :name 占位符替换为字面值，仅用于 debug 打印，**不会真正执行**
+        - str   → 'value' (单引号包裹，内部单引号转义)
+        - None  → NULL
+        - bool  → TRUE / FALSE
+        - 数字  → 原值
+        - 时间  → 'isoformat' 单引号包裹
+        """
+        if not params:
+            return sql
+
+        def _sub(match):
+            key = match.group(1)
+            if key not in params:
+                return match.group(0)
+            v = params[key]
+            if v is None:
+                return "NULL"
+            if isinstance(v, bool):
+                return "TRUE" if v else "FALSE"
+            if isinstance(v, (int, float)):
+                return str(v)
+            if isinstance(v, (datetime.datetime, datetime.date)):
+                return "'" + v.isoformat() + "'"
+            return "'" + str(v).replace("'", "''") + "'"
+
+        return re.sub(r"(?<!:):([A-Za-z_]\w*)", _sub, sql)
 
     def getTableFieldsMeta(self, table_name):
         fieldMapping = {}
@@ -319,16 +387,37 @@ class DataSource(PyDatabaseConnectivity):
     def __get_session_from_thread_local(self) -> scoped_session:
         dstl = self.__get_dataSource_threadLocal()
         if dstl.current_session is None:
-            dstl.current_session = scoped_session(self.__session_factory)
+            self.__local_obj.dstl.current_session = scoped_session(self.__session_factory)
         return dstl.current_session
 
-    def raw_query(self, sql) -> object or None:
+    @staticmethod
+    def _normalize_sql(sql, use_text):
+        """
+        统一 sql 入参格式：
+        - use_text=True  : 返回 {"sql": "...", "params": {...}}
+        - use_text=False : 返回纯字符串
+        支持 str / dict 两种入参，避免 transfer_meaning 在 dict 上崩溃
+        """
+        # use_text=True
+        if use_text:
+            if isinstance(sql, str):
+                return {"sql": transfer_meaning(sql), "params": {}}
+            return sql
+        # use_text=False
+        if isinstance(sql, dict):
+            return sql["sql"]
+        return transfer_meaning(sql)
+
+    def raw_query(self, sql: str or dict, use_text=True) -> object or None:
         self._print_sql(sql)
 
         session = self.get_session()
         ex = None
         try:
-            return session.execute(text(sql))
+            normalized = self._normalize_sql(sql, use_text)
+            if use_text:
+                return session.execute(text(normalized["sql"]), normalized["params"])
+            return session.execute(text(normalized))
         except Exception as e:
             # log.error("raw_query => " + str(e))
             ex = e
@@ -340,17 +429,19 @@ class DataSource(PyDatabaseConnectivity):
 
         return None
 
-    def query_to_df(self, sql) -> pd.DataFrame or None:
-        sql = transfer_meaning(sql)
-        self._print_sql(sql)
-        return pd.read_sql_query(sql, self._engine)
+    def query_to_df(self, sql: str or dict, use_text=True) -> pd.DataFrame or None:
+        normalized = self._normalize_sql(sql, use_text)
+        self._print_sql(normalized)
+        if use_text:
+            return pd.read_sql_query(text(normalized["sql"]), self._engine, params=normalized["params"])
+        return pd.read_sql_query(normalized, self._engine)
 
     def query_table_to_df(self, table_name, columns: list[str] | None = None) -> pd.DataFrame or None:
         self._print_sql(f"query table: {table_name}, columns: {columns if columns is not None else '*'}")
         return pd.read_sql_table(table_name, self._engine, columns=columns)
 
-    def raw_execute(self, *sqls):
-        new_sqls = [transfer_meaning(sql) for sql in sqls]
+    def raw_execute(self, *sqls : list[str] or list[dict], use_text=True):
+        new_sqls = [self._normalize_sql(sql, use_text) for sql in sqls]
         self._print_sql(*new_sqls)
 
         dstl = self.__get_dataSource_threadLocal()
@@ -361,7 +452,10 @@ class DataSource(PyDatabaseConnectivity):
         ex = None
         try:
             for sql in new_sqls:
-                result = session.execute(text(sql))
+                if use_text:
+                    result = session.execute(text(sql["sql"]), sql["params"])
+                else:
+                    result = session.execute(text(sql))
                 try:
                     # sql一般会以returning id结尾
                     results.append(result.scalar())

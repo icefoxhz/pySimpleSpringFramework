@@ -64,6 +64,9 @@ class ProxyCreator(AbstractProxyCreator):
 
         proxy_bean = self._proxy_objects.get(target_name, target)
         self._proxy_objects.clear()
+        # 触发预编译：把所有 advice 按 (method_name -> chain) 索引好
+        if proxy_bean is not target and hasattr(proxy_bean, "compile"):
+            proxy_bean.compile()
         return proxy_bean
 
     def __do_create(self, target_name, target, aop_metadata):

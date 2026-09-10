@@ -49,9 +49,15 @@ class AnnotationMetadata:
         return self._class_annotations.get(annotation_name, None)
 
     def add_method_annotation(self, method, annotation_name, annotation_value):
-        self._annotated_methods[method] = {
-            annotation_name: annotation_value
-        }
+        # 同一个方法上可以有多个注解（例如 @DS + @Select），必须合并而不是覆盖，
+        # 否则类级 @DS 遇到方法级 SQL 注解时会丢失数据源切换标记
+        annotate_dict = self._annotated_methods.get(method, None)
+        if annotate_dict is None:
+            self._annotated_methods[method] = {
+                annotation_name: annotation_value
+            }
+            return
+        annotate_dict[annotation_name] = annotation_value
 
     def add_class_annotation(self, annotation_name, annotation_value):
         self._class_annotations[annotation_name] = annotation_value

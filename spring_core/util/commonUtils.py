@@ -78,7 +78,8 @@ def get_nested_value(dot_key, my_dict, raise_ex=True) -> any or None:
     value = my_dict
 
     for key in keys:
-        if key in value:
+        # 中间层不是 dict 时（例如 a=1 还继续取 a.b），不能直接 in，否则抛 TypeError
+        if type(value) == dict and key in value:
             value = value[key]
         else:
             if raise_ex:

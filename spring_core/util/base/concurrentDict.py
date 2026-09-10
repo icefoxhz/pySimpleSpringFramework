@@ -12,16 +12,16 @@ class ConcurrentDict:
 
     @property
     def size(self):
-        with self._lock:
-            return len(self._data)
+        # GIL 下 dict 的 len 原子，无需锁
+        return len(self._data)
 
     def add(self, k, v):
         with self._lock:
             self._data[k] = v
 
     def get(self, k):
-        with self._lock:
-            return self._data.get(k, None)
+        # GIL 下 dict.get 原子，读不加锁（避免热路径每次取 bean 都拿锁）
+        return self._data.get(k, None)
 
     def remove(self, k):
         with self._lock:
@@ -29,32 +29,27 @@ class ConcurrentDict:
                 del self._data[k]
 
     def keys(self):
-        with self._lock:
-            return list(self._data.keys())
+        return list(self._data.keys())
 
     def contains_key(self, k):
-        with self._lock:
-            return k in self._data
+        return k in self._data
 
     def values(self):
-        with self._lock:
-            return list(self._data.values())
+        return list(self._data.values())
 
     def update(self, other_dict: dict):
         with self._lock:
             self._data.update(other_dict)
             
     def __getitem__(self, K):
-        with self._lock:
-            return self._data[K]
+        return self._data[K]
 
     def __setitem__(self, K, V):
         with self._lock:
             self._data[K] = V
 
     def items(self):
-        with self._lock:
-            return list(self._data.items())
+        return list(self._data.items())
 
     def __iter__(self):
         with self._lock:
