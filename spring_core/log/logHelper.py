@@ -8,8 +8,9 @@ from datetime import datetime
 # ---------- 全局配置 ----------
 cur_path = os.getcwd()
 log_path = os.path.join(cur_path, 'logs')
-if not os.path.exists(log_path):
-    os.mkdir(log_path)
+# 多进程同时启动时可能同时检查到目录不存在，os.mkdir 会因竞态抛 FileExistsError，
+# 使用 makedirs(exist_ok=True) 保证幂等
+os.makedirs(log_path, exist_ok=True)
 
 log_colors_config = {
     'DEBUG': 'white',
@@ -52,8 +53,11 @@ class HandleLog:
             return logger
 
         now_time = datetime.now().strftime('%Y-%m-%d')
-        all_log_path = os.path.join(log_path, f"{log_name}_{now_time}_all.log")
-        error_log_path = os.path.join(log_path, f"{log_name}_{now_time}_error.log")
+        # 文件名加入进程 PID：多进程部署时各进程写各自的日志文件，
+        # 避免 RotatingFileHandler 滚动时的重命名/删除竞态导致日志丢失
+        pid = os.getpid()
+        all_log_path = os.path.join(log_path, f"{log_name}_{now_time}_{pid}_all.log")
+        error_log_path = os.path.join(log_path, f"{log_name}_{now_time}_{pid}_error.log")
 
         # ----- 文件 Handler（所有级别） -----
         all_handler = RotatingFileHandler(
